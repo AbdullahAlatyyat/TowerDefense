@@ -1,6 +1,6 @@
 # TowerDefense
 
-Mobile-first web tower defense game. PixiJS 8 + TypeScript + Vite, no other runtime deps in the game client itself. Current state: full game — 5-level campaign with stars/unlocks (`src/data/levels.ts`), 4 tower types with branching upgrade paths (`src/data/towers.ts`), 4 enemy types (`src/data/enemies.ts`), date-seeded daily challenge with Wordle-style share card (`src/game/daily.ts`), localStorage saves (`src/core/save.ts`) that optionally sync to an account (`src/net/`, `server/`), procedural sprite art generated at startup (`src/render/textures.ts` — no asset files), WebAudio-synthesized SFX (`src/audio/sfx.ts`), PWA manifest.
+Mobile-first web tower defense game. PixiJS 8 + TypeScript + Vite, no other runtime deps in the game client itself. Current state: full game — 6-level campaign with stars/unlocks (`src/data/levels.ts`, one level multi-lane), Easy/Normal/Hard difficulty tiers and pause/1x-2x-3x speed controls (`src/data/difficulty.ts`, `src/core/loop.ts`), 4 tower types with branching upgrade paths (`src/data/towers.ts`), 9 enemy types including armor/flying/regen/shield/split-on-death specials and a boss archetype (`src/data/enemies.ts`), an Endless/survival mode with an escalating wave generator (`src/game/endless.ts`), date-seeded daily challenge with Wordle-style share card (`src/game/daily.ts`), persistent meta-progression — gem currency, meta-upgrades, achievements (`src/data/metaUpgrades.ts`, `src/data/achievements.ts`, `src/game/achievements.ts`) — layered on localStorage saves (`src/core/save.ts`, schema v2) that optionally sync to an account (`src/net/`, `server/`), procedural sprite art generated at startup (`src/render/textures.ts` — no asset files) with hit-flash/screen-shake juice, WebAudio-synthesized SFX and a procedural ambient music layer (`src/audio/sfx.ts`, `src/audio/music.ts`), PWA manifest.
 
 ## Commands
 
@@ -11,7 +11,7 @@ Mobile-first web tower defense game. PixiJS 8 + TypeScript + Vite, no other runt
 
 ## Accounts & sync (`server/`)
 
-A separate Node/Express/Prisma service (own `package.json`/`tsconfig.json`, not an npm workspace) backs optional accounts: email/password auth (argon2id, httpOnly session cookie backed by a DB-side `Session` table — no JWT) and progress sync against **self-hosted MSSQL**. The game is fully playable with zero network as a guest, exactly as before; signing in merges local `stars`/`daily` into the account (max-stars-per-level, first-write-wins-per-day) and an offline outbox (`src/net/sync.ts`) retries pushes that failed while offline.
+A separate Node/Express/Prisma service (own `package.json`/`tsconfig.json`, not an npm workspace) backs optional accounts: email/password auth (argon2id, httpOnly session cookie backed by a DB-side `Session` table — no JWT) and progress sync against **self-hosted MSSQL**. The game is fully playable with zero network as a guest, exactly as before; signing in merges local `stars`/`daily`/`currency`/`metaUpgrades`/`achievements` into the account (all monotonic max-wins or first-write-wins/permanent-once-unlocked) and an offline outbox (`src/net/sync.ts`) retries pushes that failed while offline.
 
 Setup:
 1. `cp server/.env.example server/.env` and fill in `DATABASE_URL` (point at your SQL Server instance — use a dedicated low-privilege login scoped to one database, never `sa`) and `SESSION_COOKIE_SECRET`.
@@ -19,7 +19,9 @@ Setup:
 3. `npm --prefix server run migrate` — note: `prisma migrate dev` needs a shadow database, which needs `CREATE DATABASE` permission the app's runtime login shouldn't have; run migrations with a more privileged connection string, then switch `.env` back to the restricted login for `npm --prefix server run dev`/`start`.
 4. `npm run dev:all` (or `npm run dev` + `npm --prefix server run dev` separately)
 
-Key files: `server/prisma/schema.prisma` (User/Session/LevelProgress/DailyResult), `server/src/routes/{auth,sync}.ts`, `src/net/{api,auth,sync}.ts`, `src/ui/auth.ts`.
+Key files: `server/prisma/schema.prisma` (User/Session/LevelProgress/DailyResult/UserAchievement/MetaUpgrade), `server/src/routes/{auth,sync}.ts`, `src/net/{api,auth,sync}.ts`, `src/ui/auth.ts`.
+
+**Pending migration:** `schema.prisma` has additive changes (`User.currency`, `UserAchievement`, `MetaUpgrade`) not yet applied to the live database — `npm --prefix server run generate` has been run (safe, local-only), but `npm --prefix server run migrate` still needs to be run against the real MSSQL instance with an elevated connection string per the note above.
 
 For production, serve the built SPA and the API from the same origin behind one reverse proxy (static at `/`, API at `/api/*`, TLS terminated there) — this keeps the session cookie same-site with zero CORS config, matching the dev proxy setup.
 
@@ -29,7 +31,7 @@ For production, serve the built SPA and the API from the same origin behind one 
 - **All gameplay randomness goes through the seeded RNG** (`src/core/rng.ts`, threaded through `GameState.rng`). Never `Math.random()` in simulation code.
 - **Fixed timestep:** simulation advances in exact 1/30s ticks (`src/core/loop.ts` accumulator); rendering is per-rAF. Gameplay durations are expressed in ticks, speeds in cells/second × `TICK_DT`.
 - **World units are grid cells** (`src/core/grid.ts`): cell (cx, cy) spans [cx, cx+1), center at +0.5. The renderer maps cells→pixels with one scale factor; never hardcode pixels in game logic.
-- **Levels are data** (`src/data/level01.ts`, `LevelDef`): grid size, orthogonal path waypoints, wave definitions. New content should be new data files, not new code.
+- **Levels are data** (`src/data/level01.ts`, `LevelDef`): grid size, one or more orthogonal-waypoint lanes (`paths`), wave definitions. Most levels have a single lane; `WaveGroup.path` picks which lane a group spawns on. New content should be new data files, not new code.
 - **UI is DOM, game board is canvas.** HUD/buttons/banners live in `index.html` + `src/ui/hud.ts` (CSS handles safe areas, fonts). Only the board renders through Pixi.
 
 ## Mobile-first constraints
@@ -37,7 +39,7 @@ For production, serve the built SPA and the API from the same origin behind one 
 - Portrait orientation; landscape shows a rotate hint (CSS-only, `src/style.css`).
 - Touch placement: press-and-drag from the dock button; on touch the ghost is offset 1.6 cells above the finger so it never hides the target cell (`src/ui/input.ts`).
 - `touch-action: none` on the board and dock buttons; min 44px touch targets; `env(safe-area-inset-*)` padding; `100dvh` layout.
-- Keep the bundle small (currently ~86 KB gzip) — instant load is the web's advantage.
+- Keep the bundle small (currently ~114 KB gzip for the app chunk, grown from ~86 KB as of the multi-path/endless/meta-progression/polish features — watch this on future additions) — instant load is the web's advantage.
 
 ## Verification
 

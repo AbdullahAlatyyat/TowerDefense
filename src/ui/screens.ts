@@ -1,6 +1,7 @@
 import { LEVELS } from "../data/levels";
 import { dailyDateStr, dailyNumber } from "../game/daily";
 import type { SaveData } from "../core/save";
+import { DIFFICULTIES, DIFFICULTY_ORDER, type DifficultyId } from "../data/difficulty";
 
 export interface Screens {
   showMenu(): void;
@@ -16,11 +17,33 @@ export function createScreens(opts: {
   getSave: () => SaveData;
   onPlayLevel: (index: number) => void;
   onPlayDaily: () => void;
+  onPlayEndless: () => void;
+  getDifficulty: () => DifficultyId;
+  onSetDifficulty: (difficulty: DifficultyId) => void;
 }): Screens {
   const menu = el("screen-menu");
   const levels = el("screen-levels");
   const grid = el("level-grid");
   const dailyLabel = el("daily-label");
+  const endlessLabel = el("endless-label");
+  const currencyLabel = el("menu-currency");
+  const difficultyPicker = el("difficulty-picker");
+
+  function buildDifficultyPicker(): void {
+    difficultyPicker.innerHTML = "";
+    for (const id of DIFFICULTY_ORDER) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.textContent = DIFFICULTIES[id].label;
+      btn.classList.toggle("active", opts.getDifficulty() === id);
+      btn.addEventListener("click", () => {
+        opts.onSetDifficulty(id);
+        buildDifficultyPicker();
+      });
+      difficultyPicker.appendChild(btn);
+    }
+  }
+  buildDifficultyPicker();
 
   el("btn-menu-play").addEventListener("click", () => {
     refreshLevels();
@@ -32,6 +55,7 @@ export function createScreens(opts: {
     menu.hidden = false;
   });
   el("btn-menu-daily").addEventListener("click", opts.onPlayDaily);
+  el("btn-menu-endless").addEventListener("click", opts.onPlayEndless);
 
   function refreshMenu(): void {
     const ds = dailyDateStr();
@@ -43,6 +67,9 @@ export function createScreens(opts: {
     } else {
       dailyLabel.textContent = `Daily Challenge #${n}`;
     }
+    const best = save.bestEndlessWave;
+    endlessLabel.textContent = best > 0 ? `Endless — best wave ${best}` : "Endless";
+    currencyLabel.textContent = `💎 ${save.currency}`;
   }
 
   function refreshLevels(): void {
@@ -70,6 +97,7 @@ export function createScreens(opts: {
     },
     showLevels() {
       refreshLevels();
+      buildDifficultyPicker();
       menu.hidden = true;
       levels.hidden = false;
     },

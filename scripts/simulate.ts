@@ -10,6 +10,7 @@ import { cellKey, pointAtDistance, type PathTrack } from "../src/core/grid";
 import type { LevelDef } from "../src/data/level01";
 import { LEVELS } from "../src/data/levels";
 import { TOWERS, type TowerTypeId } from "../src/data/towers";
+import type { DifficultyId } from "../src/data/difficulty";
 import {
   createGame,
   placeTower,
@@ -20,6 +21,7 @@ import {
 } from "../src/game/state";
 import { canStartWave, startWave } from "../src/game/waves";
 import { dailyRunSeed, generateDailyLevel } from "../src/game/daily";
+import { createEndlessLevel } from "../src/game/endless";
 
 /** Deterministic build order; repeats until no cells/gold remain. */
 const BUILD_ORDER: TowerTypeId[] = [
@@ -41,11 +43,13 @@ const PATH_CHOICE: Record<TowerTypeId, 0 | 1> = {
 };
 const UPGRADE_AFTER_TOWERS = 5;
 
-/** Rank buildable cells by how much path they cover at gunner range. */
-function rankedCells(level: LevelDef, track: PathTrack, pathCells: Set<number>) {
+/** Rank buildable cells by how much path (across all lanes) they cover at gunner range. */
+function rankedCells(level: LevelDef, tracks: PathTrack[], pathCells: Set<number>) {
   const samples: { x: number; y: number }[] = [];
-  for (let d = 0; d < track.length; d += 0.25) {
-    samples.push(pointAtDistance(track, d));
+  for (const track of tracks) {
+    for (let d = 0; d < track.length; d += 0.25) {
+      samples.push(pointAtDistance(track, d));
+    }
   }
   const range = TOWERS.gunner.base.range;
   const cells: { cx: number; cy: number; score: number }[] = [];
@@ -97,9 +101,14 @@ function botAct(state: GameState, spots: ReturnType<typeof rankedCells>, built: 
   }
 }
 
-function run(level: LevelDef, seed: number, verbose: boolean) {
-  const state = createGame(level, seed);
-  const spots = rankedCells(level, state.track, state.pathCells);
+function run(
+  level: LevelDef,
+  seed: number,
+  verbose: boolean,
+  difficulty: DifficultyId = "normal",
+) {
+  const state = createGame(level, seed, difficulty);
+  const spots = rankedCells(level, state.tracks, state.pathCells);
   const built = { n: 0 };
   const maxTicks = 30 * 60 * 30; // 30 min safety cap
 
@@ -123,6 +132,7 @@ function run(level: LevelDef, seed: number, verbose: boolean) {
     lives: state.lives,
     towers: state.towers.length,
     invested,
+    waveIndex: state.waveIndex,
   };
 }
 
@@ -143,6 +153,18 @@ for (const level of levels) {
   if (!identical || a.status !== "won") failed = true;
 }
 
+// Hard difficulty is allowed to beat the greedy bot — only check determinism.
+for (const level of levels) {
+  const a = run(level, seed, false, "hard");
+  const b = run(level, seed, false, "hard");
+  const identical = JSON.stringify(a) === JSON.stringify(b);
+  console.log(
+    `${level.id} "${level.name}" [hard]: ${a.status} lives=${a.lives}/${level.startLives} ` +
+      `[${identical ? "ok" : "NON-DETERMINISTIC"}]`,
+  );
+  if (!identical) failed = true;
+}
+
 // Sample generated daily levels: every one must be winnable.
 const DAILY_SAMPLE = Number(process.env.DAILY_SAMPLE ?? 20);
 const dailyLives: number[] = [];
@@ -153,7 +175,7 @@ for (let i = 0; i < DAILY_SAMPLE; i++) {
   const r = run(level, dailyRunSeed(ds), false);
   dailyLives.push(r.status === "won" ? r.lives : -1);
   if (r.status !== "won") {
-    console.log(`  daily ${ds}: LOST at tick ${r.tick} (waves=${level.waves.length}, path=${level.path.length} pts)`);
+    console.log(`  daily ${ds}: LOST at tick ${r.tick} (waves=${level.waves.length}, path=${level.paths[0]!.length} pts)`);
     failed = true;
   }
 }
@@ -162,6 +184,17 @@ console.log(
   `daily sample: ${wins.length}/${DAILY_SAMPLE} winnable, lives min=${Math.min(...wins)} ` +
     `median=${[...wins].sort((a, b) => a - b)[Math.floor(wins.length / 2)]}`,
 );
+
+// Endless: only determinism matters — the escalating wave budget guarantees
+// the bot eventually loses, and that's by design, not a failure.
+const endlessA = run(createEndlessLevel(seed), seed, false);
+const endlessB = run(createEndlessLevel(seed), seed, false);
+const endlessIdentical = JSON.stringify(endlessA) === JSON.stringify(endlessB);
+console.log(
+  `Endless (seed=${seed}): ${endlessA.status} at wave ${endlessA.waveIndex + 1} ` +
+    `lives=${endlessA.lives} tick=${endlessA.tick} [${endlessIdentical ? "ok" : "NON-DETERMINISTIC"}]`,
+);
+if (!endlessIdentical) failed = true;
 
 if (failed) {
   console.error("FAIL: see flags above");

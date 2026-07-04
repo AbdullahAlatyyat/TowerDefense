@@ -136,7 +136,7 @@ export function generateDailyLevel(dateStr: string): LevelDef {
     name: `Daily #${dailyNumber(dateStr)}`,
     cols: COLS,
     rows: ROWS,
-    path,
+    paths: [path],
     waves: generateWaves(rng, pathLength),
     startGold: 110 + 10 * Math.floor(rng.range(0, 3)),
     startLives: 20,

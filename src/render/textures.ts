@@ -102,6 +102,91 @@ function enemyTexture(renderer: PixiRenderer, type: EnemyTypeId): Texture {
       g.circle(r * 0.35, 0, r * 0.34).fill(0xffffff);
       g.circle(r * 0.48, 0, r * 0.18).fill(0x1a1420);
       break;
+    case "golem": {
+      // armored octagon boulder with plate seams
+      const sides = 8;
+      g.moveTo(r, 0);
+      for (let i = 1; i <= sides; i++) {
+        const a = (i / sides) * Math.PI * 2;
+        g.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+      }
+      g.fill(def.color).stroke({ width: r * 0.16, color: dark });
+      g.moveTo(-r * 0.5, -r * 0.2).lineTo(r * 0.5, -r * 0.1)
+        .moveTo(-r * 0.4, r * 0.3).lineTo(r * 0.4, r * 0.35)
+        .stroke({ width: r * 0.05, color: dark });
+      g.circle(-r * 0.2, -r * 0.2, r * 0.4).fill({ color: light, alpha: 0.3 });
+      drawEyes(g, r, 0.3, r * 0.15);
+      break;
+    }
+    case "wisp": {
+      // ghostly orb trailing a wavy translucent tail
+      g.moveTo(-r * 0.6, r * 0.4)
+        .quadraticCurveTo(-r * 0.3, r * 0.75, 0, r * 0.4)
+        .quadraticCurveTo(r * 0.3, r * 0.75, r * 0.6, r * 0.4)
+        .stroke({ width: r * 0.2, color: def.color, alpha: 0.55, cap: "round" });
+      g.circle(0, -r * 0.15, r * 0.8)
+        .fill({ color: def.color, alpha: 0.85 })
+        .stroke({ width: r * 0.1, color: dark, alpha: 0.7 });
+      g.circle(-r * 0.15, -r * 0.4, r * 0.3).fill({ color: light, alpha: 0.5 });
+      drawEyes(g, r * 0.8, 0.35, r * 0.14);
+      break;
+    }
+    case "troll": {
+      // stocky healer silhouette with a glowing cross on its chest
+      g.roundRect(-r * 0.75, -r * 0.9, r * 1.5, r * 1.8, r * 0.6)
+        .fill(def.color)
+        .stroke({ width: r * 0.15, color: dark });
+      g.roundRect(-r * 0.09, -r * 0.05, r * 0.18, r * 0.5, r * 0.05).fill({ color: 0xffffff, alpha: 0.75 });
+      g.roundRect(-r * 0.25, r * 0.1, r * 0.5, r * 0.18, r * 0.05).fill({ color: 0xffffff, alpha: 0.75 });
+      g.circle(-r * 0.2, -r * 0.5, r * 0.35).fill({ color: light, alpha: 0.3 });
+      drawEyes(g, r, 0.35, r * 0.17);
+      break;
+    }
+    case "warden": {
+      // shield emblem on a stout body, hinting at its damage-absorbing shield
+      g.circle(0, 0, r).fill(def.color).stroke({ width: r * 0.16, color: dark });
+      g.moveTo(0, -r * 0.55)
+        .lineTo(r * 0.45, -r * 0.25)
+        .lineTo(r * 0.35, r * 0.35)
+        .lineTo(0, r * 0.6)
+        .lineTo(-r * 0.35, r * 0.35)
+        .lineTo(-r * 0.45, -r * 0.25)
+        .closePath()
+        .fill({ color: 0xffffff, alpha: 0.25 })
+        .stroke({ width: r * 0.05, color: 0xffffff, alpha: 0.6 });
+      drawEyes(g, r, 0.4, r * 0.16);
+      break;
+    }
+    case "blob": {
+      // amoeba shape with two inner nubs foreshadowing its on-death split
+      g.circle(-r * 0.35, r * 0.25, r * 0.42).fill(def.color).stroke({ width: r * 0.1, color: dark });
+      g.circle(r * 0.35, r * 0.25, r * 0.42).fill(def.color).stroke({ width: r * 0.1, color: dark });
+      g.circle(0, 0, r).fill(def.color).stroke({ width: r * 0.14, color: dark });
+      g.circle(-r * 0.2, -r * 0.25, r * 0.35).fill({ color: light, alpha: 0.35 });
+      drawEyes(g, r, 0.35, r * 0.18);
+      break;
+    }
+    case "warlord": {
+      // hulking silhouette with a spiked crown — reads as a boss at a glance
+      for (let i = 0; i < 5; i++) {
+        const a = -Math.PI * 0.5 + (i - 2) * 0.32;
+        const bx = Math.cos(a) * r * 0.85;
+        const by = Math.sin(a) * r * 0.85;
+        g.moveTo(bx - r * 0.08, by).lineTo(bx, by - r * 0.5).lineTo(bx + r * 0.08, by)
+          .closePath()
+          .fill(0xe8d9a0)
+          .stroke({ width: r * 0.03, color: dark });
+      }
+      g.circle(0, 0, r).fill(def.color).stroke({ width: r * 0.18, color: dark });
+      g.circle(-r * 0.25, -r * 0.25, r * 0.5).fill({ color: light, alpha: 0.3 });
+      g.moveTo(r * 0.15, -r * 0.68).lineTo(r * 0.7, -r * 0.36)
+        .moveTo(r * 0.15, r * 0.68).lineTo(r * 0.7, r * 0.36)
+        .stroke({ width: r * 0.13, color: dark });
+      drawEyes(g, r, 0.4, r * 0.22);
+      g.circle(r * 0.45, -r * 0.4, r * 0.22).fill({ color: 0xf87171, alpha: 0.6 });
+      g.circle(r * 0.45, r * 0.4, r * 0.22).fill({ color: 0xf87171, alpha: 0.6 });
+      break;
+    }
   }
   return toTexture(renderer, g);
 }

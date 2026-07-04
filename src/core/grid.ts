@@ -40,6 +40,15 @@ export function expandPathCells(waypoints: readonly Cell[]): Set<number> {
   return cells;
 }
 
+/** Buildability union across every lane of a multi-path level. */
+export function unionPathCells(paths: readonly (readonly Cell[])[]): Set<number> {
+  const cells = new Set<number>();
+  for (const path of paths) {
+    for (const key of expandPathCells(path)) cells.add(key);
+  }
+  return cells;
+}
+
 /** Polyline through waypoint cell centers, with cumulative segment lengths. */
 export interface PathTrack {
   points: Point[];

@@ -20,9 +20,16 @@
         <span class="stat" id="stat-lives">❤️ <b>20</b></span>
         <span class="stat" id="stat-gold">🪙 <b>100</b></span>
         <span class="stat" id="stat-wave">Wave <b>0/0</b></span>
+        <button id="btn-pause" aria-label="pause">⏸</button>
+        <button id="btn-speed" aria-label="speed up">1x</button>
         <button id="btn-perf" aria-label="performance stats">📈</button>
         <button id="btn-mute" aria-label="toggle sound">🔊</button>
       </header>
+
+      <div id="boss-bar" hidden>
+        <span id="boss-bar-name">Boss</span>
+        <div id="boss-bar-track"><div id="boss-bar-fill"></div></div>
+      </div>
 
       <div id="board"></div>
 
@@ -66,19 +73,44 @@
 
       <div id="screen-menu" class="screen">
         <div class="menu-card">
-          <button id="btn-account" class="account-badge">👤 Sign in</button>
+          <div id="menu-top-row">
+            <button id="btn-account" class="account-badge">👤 Sign in</button>
+            <span id="menu-currency" class="account-badge">💎 0</span>
+          </div>
           <h1 class="game-title">🗼<br />Tower Defense</h1>
           <p class="tagline">One thumb. Six waves. Hold the line.</p>
           <button id="btn-menu-play" class="menu-btn primary">▶ Campaign</button>
           <button id="btn-menu-daily" class="menu-btn">
             📅 <span id="daily-label">Daily Challenge</span>
           </button>
+          <button id="btn-menu-endless" class="menu-btn">
+            ♾️ <span id="endless-label">Endless</span>
+          </button>
+          <button id="btn-menu-shop" class="menu-btn">🛒 Upgrades</button>
+          <button id="btn-menu-achievements" class="menu-btn">🏅 Achievements</button>
+        </div>
+      </div>
+
+      <div id="screen-shop" class="screen" hidden>
+        <div class="menu-card">
+          <h2>Upgrades <span id="shop-currency"></span></h2>
+          <div id="shop-list"></div>
+          <button id="btn-shop-back" class="menu-btn">← Back</button>
+        </div>
+      </div>
+
+      <div id="screen-achievements" class="screen" hidden>
+        <div class="menu-card">
+          <h2>Achievements</h2>
+          <div id="achievements-list"></div>
+          <button id="btn-achievements-back" class="menu-btn">← Back</button>
         </div>
       </div>
 
       <div id="screen-levels" class="screen" hidden>
         <div class="menu-card">
           <h2>Select level</h2>
+          <div id="difficulty-picker" class="segmented"></div>
           <div id="level-grid"></div>
           <button id="btn-levels-back" class="menu-btn">← Back</button>
         </div>

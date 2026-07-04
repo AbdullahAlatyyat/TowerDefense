@@ -11,17 +11,19 @@ const LEVEL_02: LevelDef = {
   name: "Switchback",
   cols: 9,
   rows: 16,
-  path: [
-    [6, 0],
-    [6, 2],
-    [2, 2],
-    [2, 5],
-    [7, 5],
-    [7, 9],
-    [1, 9],
-    [1, 13],
-    [5, 13],
-    [5, 15],
+  paths: [
+    [
+      [6, 0],
+      [6, 2],
+      [2, 2],
+      [2, 5],
+      [7, 5],
+      [7, 9],
+      [1, 9],
+      [1, 13],
+      [5, 13],
+      [5, 15],
+    ],
   ],
   waves: [
     { groups: [{ enemy: "grunt", count: 9, hp: 5, spawnInterval: 22 }] },
@@ -35,6 +37,7 @@ const LEVEL_02: LevelDef = {
       groups: [
         { enemy: "swarm", count: 14, hp: 9, spawnInterval: 7 },
         { enemy: "grunt", count: 8, hp: 9, spawnInterval: 18 },
+        { enemy: "blob", count: 1, hp: 9, spawnInterval: 18 },
       ],
     },
     {
@@ -60,6 +63,7 @@ const LEVEL_02: LevelDef = {
         { enemy: "brute", count: 5, hp: 19, spawnInterval: 38 },
         { enemy: "grunt", count: 12, hp: 14, spawnInterval: 13 },
         { enemy: "runner", count: 8, hp: 12, spawnInterval: 10 },
+        { enemy: "warlord", count: 1, hp: 18, spawnInterval: 1 },
       ],
     },
   ],
@@ -72,15 +76,17 @@ const LEVEL_03: LevelDef = {
   name: "The Long Way",
   cols: 9,
   rows: 16,
-  path: [
-    [0, 1],
-    [7, 1],
-    [7, 13],
-    [1, 13],
-    [1, 5],
-    [4, 5],
-    [4, 10],
-    [8, 10],
+  paths: [
+    [
+      [0, 1],
+      [7, 1],
+      [7, 13],
+      [1, 13],
+      [1, 5],
+      [4, 5],
+      [4, 10],
+      [8, 10],
+    ],
   ],
   waves: [
     { groups: [{ enemy: "grunt", count: 10, hp: 6, spawnInterval: 20 }] },
@@ -100,6 +106,7 @@ const LEVEL_03: LevelDef = {
       groups: [
         { enemy: "grunt", count: 12, hp: 11, spawnInterval: 15 },
         { enemy: "runner", count: 10, hp: 9, spawnInterval: 11 },
+        { enemy: "troll", count: 1, hp: 11, spawnInterval: 15 },
       ],
     },
     {
@@ -119,6 +126,7 @@ const LEVEL_03: LevelDef = {
         { enemy: "brute", count: 5, hp: 21, spawnInterval: 36 },
         { enemy: "swarm", count: 20, hp: 13, spawnInterval: 5 },
         { enemy: "runner", count: 10, hp: 13, spawnInterval: 9 },
+        { enemy: "warlord", count: 1, hp: 20, spawnInterval: 1 },
       ],
     },
   ],
@@ -131,15 +139,17 @@ const LEVEL_04: LevelDef = {
   name: "Crossroads",
   cols: 9,
   rows: 16,
-  path: [
-    [4, 0],
-    [4, 6],
-    [1, 6],
-    [1, 3],
-    [7, 3],
-    [7, 9],
-    [4, 9],
-    [4, 15],
+  paths: [
+    [
+      [4, 0],
+      [4, 6],
+      [1, 6],
+      [1, 3],
+      [7, 3],
+      [7, 9],
+      [4, 9],
+      [4, 15],
+    ],
   ],
   waves: [
     {
@@ -158,6 +168,7 @@ const LEVEL_04: LevelDef = {
       groups: [
         { enemy: "swarm", count: 22, hp: 12, spawnInterval: 5 },
         { enemy: "runner", count: 10, hp: 10, spawnInterval: 10 },
+        { enemy: "warden", count: 1, hp: 12, spawnInterval: 5 },
       ],
     },
     {
@@ -183,6 +194,7 @@ const LEVEL_04: LevelDef = {
         { enemy: "brute", count: 6, hp: 24, spawnInterval: 34 },
         { enemy: "grunt", count: 14, hp: 16, spawnInterval: 11 },
         { enemy: "swarm", count: 22, hp: 15, spawnInterval: 5 },
+        { enemy: "warlord", count: 1, hp: 22, spawnInterval: 1 },
       ],
     },
   ],
@@ -195,15 +207,17 @@ const LEVEL_05: LevelDef = {
   name: "The Gauntlet",
   cols: 9,
   rows: 16,
-  path: [
-    [4, 0],
-    [4, 4],
-    [1, 4],
-    [1, 8],
-    [7, 8],
-    [7, 12],
-    [4, 12],
-    [4, 15],
+  paths: [
+    [
+      [4, 0],
+      [4, 4],
+      [1, 4],
+      [1, 8],
+      [7, 8],
+      [7, 12],
+      [4, 12],
+      [4, 15],
+    ],
   ],
   waves: [
     {
@@ -253,6 +267,7 @@ const LEVEL_05: LevelDef = {
         { enemy: "brute", count: 6, hp: 25, spawnInterval: 30 },
         { enemy: "grunt", count: 14, hp: 17, spawnInterval: 10 },
         { enemy: "swarm", count: 20, hp: 15, spawnInterval: 4 },
+        { enemy: "warlord", count: 1, hp: 12, spawnInterval: 1 },
       ],
     },
   ],
@@ -260,4 +275,79 @@ const LEVEL_05: LevelDef = {
   startLives: 20,
 };
 
-export const LEVELS: LevelDef[] = [LEVEL_01, LEVEL_02, LEVEL_03, LEVEL_04, LEVEL_05];
+/** First multi-lane level: two parallel tracks enemies split across. */
+const LEVEL_06: LevelDef = {
+  id: "L6",
+  name: "Twin Rivers",
+  cols: 9,
+  rows: 16,
+  paths: [
+    [
+      [1, 0],
+      [1, 6],
+      [3, 6],
+      [3, 10],
+      [1, 10],
+      [1, 15],
+    ],
+    [
+      [7, 0],
+      [7, 5],
+      [5, 5],
+      [5, 9],
+      [7, 9],
+      [7, 15],
+    ],
+  ],
+  waves: [
+    {
+      groups: [
+        { enemy: "grunt", count: 6, hp: 4, spawnInterval: 24, path: 0 },
+        { enemy: "grunt", count: 6, hp: 4, spawnInterval: 24, path: 1 },
+      ],
+    },
+    {
+      groups: [
+        { enemy: "grunt", count: 6, hp: 6, spawnInterval: 22, path: 0 },
+        { enemy: "runner", count: 4, hp: 5, spawnInterval: 16, path: 1 },
+      ],
+    },
+    {
+      groups: [
+        { enemy: "runner", count: 5, hp: 6, spawnInterval: 14, path: 0 },
+        { enemy: "grunt", count: 8, hp: 8, spawnInterval: 20, path: 1 },
+      ],
+    },
+    {
+      groups: [
+        { enemy: "brute", count: 2, hp: 13, spawnInterval: 46, path: 0 },
+        { enemy: "grunt", count: 8, hp: 10, spawnInterval: 17, path: 1 },
+      ],
+    },
+    {
+      groups: [
+        { enemy: "swarm", count: 16, hp: 10, spawnInterval: 6, path: 0 },
+        { enemy: "runner", count: 8, hp: 9, spawnInterval: 12, path: 1 },
+      ],
+    },
+    {
+      groups: [
+        { enemy: "brute", count: 4, hp: 16, spawnInterval: 40, path: 0 },
+        { enemy: "grunt", count: 10, hp: 13, spawnInterval: 14, path: 1 },
+        { enemy: "runner", count: 6, hp: 11, spawnInterval: 11, path: 0 },
+        { enemy: "warlord", count: 1, hp: 12, spawnInterval: 1, path: 1 },
+      ],
+    },
+  ],
+  startGold: 150,
+  startLives: 24,
+};
+
+export const LEVELS: LevelDef[] = [
+  LEVEL_01,
+  LEVEL_02,
+  LEVEL_03,
+  LEVEL_04,
+  LEVEL_05,
+  LEVEL_06,
+];

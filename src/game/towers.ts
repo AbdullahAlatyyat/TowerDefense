@@ -1,4 +1,5 @@
 import { TICK_DT } from "../core/loop";
+import { ENEMIES } from "../data/enemies";
 import { towerStats, type Enemy, type GameState, type Projectile } from "./state";
 
 const HIT_RADIUS = 0.18;
@@ -95,13 +96,25 @@ function impact(state: GameState, proj: Projectile, target: Enemy): void {
 function applyDamage(state: GameState, proj: Projectile, enemy: Enemy): void {
   if (!state.enemies.includes(enemy)) return; // already killed by this splash
 
+  const def = ENEMIES[enemy.type];
+  let dmg = def.armor ? Math.max(0.1, proj.damage - def.armor) : proj.damage;
   const brittle =
     state.tick < enemy.brittleUntilTick ? enemy.brittleBonus : 0;
-  enemy.hp -= proj.damage * (1 + brittle);
+  dmg *= 1 + brittle;
+
+  enemy.lastHitTick = state.tick;
+  if (enemy.shieldHp > 0) {
+    const absorbed = Math.min(enemy.shieldHp, dmg);
+    enemy.shieldHp -= absorbed;
+    dmg -= absorbed;
+  }
+  if (dmg > 0) enemy.hitSeq++;
+  enemy.hp -= dmg;
 
   if (enemy.hp <= 0) {
     state.gold += enemy.bounty;
     state.enemies = state.enemies.filter((e) => e.id !== enemy.id);
+    if (def.splitInto) spawnSplit(state, enemy, def.splitInto);
     return;
   }
   // Debuffs only matter on survivors.
@@ -112,5 +125,37 @@ function applyDamage(state: GameState, proj: Projectile, enemy: Enemy): void {
   if (proj.brittleTicks > 0) {
     enemy.brittleUntilTick = state.tick + proj.brittleTicks;
     enemy.brittleBonus = proj.brittleBonus;
+  }
+}
+
+/** Deterministic on-death split: replacement enemies at the parent's spot. */
+function spawnSplit(
+  state: GameState,
+  parent: Enemy,
+  split: { type: Enemy["type"]; count: number; hpFrac: number },
+): void {
+  const childDef = ENEMIES[split.type];
+  const hp = Math.max(1, Math.round(parent.maxHp * split.hpFrac));
+  for (let i = 0; i < split.count; i++) {
+    state.enemies.push({
+      id: state.nextId++,
+      type: split.type,
+      laneIndex: parent.laneIndex,
+      dist: parent.dist,
+      x: parent.x,
+      y: parent.y,
+      speed: childDef.speed,
+      hp,
+      maxHp: hp,
+      bounty: childDef.bounty,
+      slowUntilTick: 0,
+      slowFactor: 1,
+      brittleUntilTick: 0,
+      brittleBonus: 0,
+      shieldHp: 0,
+      shieldMax: 0,
+      lastHitTick: -Infinity,
+      hitSeq: 0,
+    });
   }
 }

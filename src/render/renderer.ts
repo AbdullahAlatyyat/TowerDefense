@@ -26,7 +26,6 @@ const COLORS = {
   pebble: 0x39485c,
   roadEdge: 0x1f2937,
   road: 0x39465c,
-  roadWear: 0x4b5b74,
   portalIn: 0x7f5af0,
   portalOut: 0xd95c5c,
   hpBack: 0x101720,
@@ -39,6 +38,9 @@ const COLORS = {
   gold: 0xfbbf24,
 };
 
+/** Worn-centerline tint per lane, for levels with more than one path. */
+const LANE_WEAR_TINTS = [0x4b5b74, 0xfbbf24, 0x67e8f9];
+
 /** Per-frame gameplay events the renderer detected by diffing state — the
  * app layer uses these to drive sound. */
 export interface RenderEvents {
@@ -47,16 +49,27 @@ export interface RenderEvents {
   leaks: number;
   impacts: number;
   splashes: number;
+  bossSpawns: number;
 }
 
 interface EnemyView {
   c: Container;
   body: Sprite;
+  shieldRing: Sprite;
   hpBack: Sprite;
   hpFill: Sprite;
   born: number;
   angle: number;
-  snap: { x: number; y: number; dist: number; color: number; bounty: number };
+  lastHitSeq: number;
+  snap: {
+    x: number;
+    y: number;
+    dist: number;
+    laneIndex: number;
+    color: number;
+    bounty: number;
+    isBoss: boolean;
+  };
 }
 
 interface TowerView {
@@ -116,6 +129,14 @@ export class Renderer {
   /** pixels per world cell */
   cellPx = 1;
 
+  /** world.position sans shake, so input math and re-centering stay stable. */
+  private basePos = { x: 0, y: 0 };
+  private shakeTime = 0;
+  private shakeMag = 0;
+  private readonly SHAKE_DURATION = 0.15;
+  private readonly reducedMotion =
+    typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+
   async init(host: HTMLElement, level: LevelDef): Promise<void> {
     this.level = level;
     await this.app.init({
@@ -149,33 +170,56 @@ export class Renderer {
     const h = this.app.screen.height;
     this.cellPx = Math.min(w / this.level.cols, h / this.level.rows);
     this.world.scale.set(this.cellPx);
-    this.world.position.set(
-      (w - this.cellPx * this.level.cols) / 2,
-      (h - this.cellPx * this.level.rows) / 2,
-    );
+    this.basePos = {
+      x: (w - this.cellPx * this.level.cols) / 2,
+      y: (h - this.cellPx * this.level.rows) / 2,
+    };
+    this.world.position.set(this.basePos.x, this.basePos.y);
   }
 
   worldFromClient(clientX: number, clientY: number): { x: number; y: number } {
     const rect = this.app.canvas.getBoundingClientRect();
     return {
-      x: (clientX - rect.left - this.world.position.x) / this.cellPx,
-      y: (clientY - rect.top - this.world.position.y) / this.cellPx,
+      x: (clientX - rect.left - this.basePos.x) / this.cellPx,
+      y: (clientY - rect.top - this.basePos.y) / this.cellPx,
     };
+  }
+
+  /** Brief camera shake, e.g. on splash impacts, leaks, or a boss dying. */
+  triggerShake(magnitude: number): void {
+    if (this.reducedMotion) return;
+    if (this.shakeTime <= 0 || magnitude >= this.shakeMag) this.shakeMag = magnitude;
+    this.shakeTime = this.SHAKE_DURATION;
+  }
+
+  private applyShake(dt: number): void {
+    if (this.shakeTime > 0) {
+      this.shakeTime = Math.max(0, this.shakeTime - dt);
+      const amp = this.shakeMag * (this.shakeTime / this.SHAKE_DURATION);
+      this.world.position.set(
+        this.basePos.x + (Math.random() * 2 - 1) * amp,
+        this.basePos.y + (Math.random() * 2 - 1) * amp,
+      );
+    } else if (this.world.position.x !== this.basePos.x || this.world.position.y !== this.basePos.y) {
+      this.world.position.set(this.basePos.x, this.basePos.y);
+    }
   }
 
   /** Terrain: tile tones, scattered props, a worn road, and portals. */
   private drawBoard(): void {
     const g = this.staticLayer;
     g.clear();
-    const { cols, rows, path } = this.level;
+    const { cols, rows, paths } = this.level;
     const rng = createRng(hashString(`board:${this.level.id}`));
     const pathCells = new Set<number>();
-    for (const [a, b] of path.map((p, i) => [p, path[i + 1]] as const)) {
-      if (!b) break;
-      const steps = Math.abs(b[0] - a[0]) + Math.abs(b[1] - a[1]);
-      const dx = Math.sign(b[0] - a[0]);
-      const dy = Math.sign(b[1] - a[1]);
-      for (let s = 0; s <= steps; s++) pathCells.add(cellKey(a[0] + dx * s, a[1] + dy * s));
+    for (const path of paths) {
+      for (const [a, b] of path.map((p, i) => [p, path[i + 1]] as const)) {
+        if (!b) break;
+        const steps = Math.abs(b[0] - a[0]) + Math.abs(b[1] - a[1]);
+        const dx = Math.sign(b[0] - a[0]);
+        const dy = Math.sign(b[1] - a[1]);
+        for (let s = 0; s <= steps; s++) pathCells.add(cellKey(a[0] + dx * s, a[1] + dy * s));
+      }
     }
 
     // Tiles with subtle tone variation and a hairline inset.
@@ -206,25 +250,28 @@ export class Renderer {
       }
     }
 
-    // Road: edge, bed, and a worn center line, rounded corners.
-    const pts = path.map(cellCenter);
-    const drawPoly = (width: number, color: number, alpha = 1) => {
-      const first = pts[0]!;
-      g.moveTo(first.x, first.y);
-      for (const p of pts.slice(1)) g.lineTo(p.x, p.y);
-      g.stroke({ width, color, alpha, cap: "round", join: "round" });
-    };
-    drawPoly(0.94, COLORS.roadEdge);
-    drawPoly(0.8, COLORS.road);
-    drawPoly(0.42, COLORS.roadWear, 0.35);
+    // Road: edge, bed, and a worn center line (tinted per lane), rounded corners.
+    for (const [laneIndex, path] of paths.entries()) {
+      const pts = path.map(cellCenter);
+      const drawPoly = (width: number, color: number, alpha = 1) => {
+        const first = pts[0]!;
+        g.moveTo(first.x, first.y);
+        for (const p of pts.slice(1)) g.lineTo(p.x, p.y);
+        g.stroke({ width, color, alpha, cap: "round", join: "round" });
+      };
+      drawPoly(0.94, COLORS.roadEdge);
+      drawPoly(0.8, COLORS.road);
+      const wearColor = LANE_WEAR_TINTS[laneIndex % LANE_WEAR_TINTS.length]!;
+      drawPoly(0.42, wearColor, 0.35);
 
-    // Portals (static part; the pulse is animated in the overlay).
-    const start = pts[0]!;
-    const end = pts[pts.length - 1]!;
-    g.circle(start.x, start.y, 0.34).fill(0x241d3d)
-      .stroke({ width: 0.07, color: COLORS.portalIn });
-    g.circle(end.x, end.y, 0.34).fill(0x3d1d1d)
-      .stroke({ width: 0.07, color: COLORS.portalOut });
+      // Portals (static part; the pulse is animated in the overlay).
+      const start = pts[0]!;
+      const end = pts[pts.length - 1]!;
+      g.circle(start.x, start.y, 0.34).fill(0x241d3d)
+        .stroke({ width: 0.07, color: COLORS.portalIn });
+      g.circle(end.x, end.y, 0.34).fill(0x3d1d1d)
+        .stroke({ width: 0.07, color: COLORS.portalOut });
+    }
 
     // Board frame.
     g.roundRect(-0.06, -0.06, cols + 0.12, rows + 0.12, 0.15)
@@ -234,11 +281,19 @@ export class Renderer {
   render(state: GameState, ui: UiState, now: number): RenderEvents {
     const dt = this.lastNow ? Math.min(now - this.lastNow, 0.1) : 0.016;
     this.lastNow = now;
-    const events: RenderEvents = { shots: 0, deaths: 0, leaks: 0, impacts: 0, splashes: 0 };
+    const events: RenderEvents = {
+      shots: 0,
+      deaths: 0,
+      leaks: 0,
+      impacts: 0,
+      splashes: 0,
+      bossSpawns: 0,
+    };
     this.syncTowers(state, now);
     this.syncEnemies(state, now, events);
     this.syncProjectiles(state, events);
     this.updateParticles(dt);
+    this.applyShake(dt);
     this.drawOverlay(state, ui, now);
     return events;
   }
@@ -328,6 +383,12 @@ export class Renderer {
     const body = new Sprite(this.atlas.enemies[type]);
     body.anchor.set(0.5);
     body.scale.set(1 / T);
+    body.alpha = def.flying ? 0.82 : 1;
+    const shieldRing = new Sprite(this.atlas.ring);
+    shieldRing.anchor.set(0.5);
+    shieldRing.tint = 0x93c5fd;
+    shieldRing.scale.set((def.radius * 2.6) / T);
+    shieldRing.visible = false;
     const hpBack = new Sprite(Texture.WHITE);
     hpBack.tint = COLORS.hpBack;
     const hpFill = new Sprite(Texture.WHITE);
@@ -340,15 +401,17 @@ export class Renderer {
       bar.visible = false;
     }
     hpBack.width = w;
-    c.addChild(shadow, body, hpBack, hpFill);
+    c.addChild(shadow, body, shieldRing, hpBack, hpFill);
     return {
       c,
       body,
+      shieldRing,
       hpBack,
       hpFill,
       born: now,
       angle: 0,
-      snap: { x: 0, y: 0, dist: 0, color: def.color, bounty: def.bounty },
+      lastHitSeq: 0,
+      snap: { x: 0, y: 0, dist: 0, laneIndex: 0, color: def.color, bounty: def.bounty, isBoss: !!def.isBoss },
     };
   }
 
@@ -357,12 +420,21 @@ export class Renderer {
     for (const enemy of state.enemies) {
       seen.add(enemy.id);
       let view = this.enemyViews.get(enemy.id);
+      const def = ENEMIES[enemy.type];
       if (!view) {
         view = this.makeEnemyView(enemy.type, now);
         this.enemyViews.set(enemy.id, view);
         this.enemyLayer.addChild(view.c);
+        if (def.isBoss) {
+          events.bossSpawns++;
+          this.spawnRing(enemy.x, enemy.y, 0.9, def.color);
+          this.triggerShake(5);
+        }
       }
-      const def = ENEMIES[enemy.type];
+      if (enemy.hitSeq !== view.lastHitSeq) {
+        view.lastHitSeq = enemy.hitSeq;
+        this.hitFlash(enemy.x, enemy.y, def.radius);
+      }
       // Face direction of travel (smoothed).
       const dx = enemy.x - view.snap.x;
       const dy = enemy.y - view.snap.y;
@@ -377,8 +449,10 @@ export class Renderer {
         x: enemy.x,
         y: enemy.y,
         dist: enemy.dist,
+        laneIndex: enemy.laneIndex,
         color: def.color,
         bounty: enemy.bounty,
+        isBoss: !!def.isBoss,
       };
       view.c.position.set(enemy.x, enemy.y);
       view.body.rotation = view.angle;
@@ -394,6 +468,12 @@ export class Renderer {
       const brittle = state.tick < enemy.brittleUntilTick;
       view.body.tint = slowed && brittle ? 0xa9c0ff : slowed ? 0x9fd4ff : brittle ? 0xd7c5ff : 0xffffff;
 
+      // Shield ring: visible and fading with remaining shield pool.
+      view.shieldRing.visible = enemy.shieldHp > 0;
+      if (enemy.shieldHp > 0) {
+        view.shieldRing.alpha = 0.4 + 0.5 * (enemy.shieldHp / enemy.shieldMax);
+      }
+
       const frac = Math.max(0, enemy.hp / enemy.maxHp);
       const showHp = frac < 1;
       view.hpBack.visible = showHp;
@@ -403,14 +483,16 @@ export class Renderer {
     // Departed enemies: near the exit → leak, otherwise death.
     for (const [id, view] of this.enemyViews) {
       if (seen.has(id)) continue;
-      const leaked = view.snap.dist >= state.track.length - 0.6;
+      const leaked = view.snap.dist >= state.tracks[view.snap.laneIndex]!.length - 0.6;
       if (leaked) {
         events.leaks++;
         this.spawnRing(view.snap.x, view.snap.y, 0.55, COLORS.portalOut);
+        this.triggerShake(3);
       } else {
         events.deaths++;
         this.burst(view.snap.x, view.snap.y, view.snap.color, 8);
         this.floatText(view.snap.x, view.snap.y - 0.3, `+${view.snap.bounty}`);
+        if (view.snap.isBoss) this.triggerShake(9);
       }
       view.c.destroy({ children: true });
       this.enemyViews.delete(id);
@@ -450,6 +532,7 @@ export class Renderer {
         events.splashes++;
         this.spawnRing(view.last.x, view.last.y, view.splash, color);
         this.burst(view.last.x, view.last.y, color, 8);
+        this.triggerShake(4);
       } else {
         events.impacts++;
         this.burst(view.last.x, view.last.y, color, 3);
@@ -499,6 +582,17 @@ export class Renderer {
     s.position.set(x, y);
     s.scale.set(0.5 / T);
     this.addParticle({ s, vx: 0, vy: 0, life: 0.08, maxLife: 0.08, growTo: 0 });
+  }
+
+  /** Brief additive white flash on an enemy that just took damage. */
+  private hitFlash(x: number, y: number, radius: number): void {
+    const s = new Sprite(this.atlas.glow);
+    s.anchor.set(0.5);
+    s.tint = 0xffffff;
+    s.blendMode = "add";
+    s.position.set(x, y);
+    s.scale.set((radius * 2.2) / T);
+    this.addParticle({ s, vx: 0, vy: 0, life: 0.1, maxLife: 0.1, growTo: 0 });
   }
 
   private spawnRing(x: number, y: number, radius: number, color: number): void {
@@ -578,15 +672,17 @@ export class Renderer {
     const g = this.ghostLayer;
     g.clear();
 
-    // Animated portal pulses.
-    const pts = state.level.path.map(cellCenter);
-    const start = pts[0]!;
-    const end = pts[pts.length - 1]!;
+    // Animated portal pulses, one pair per lane.
     const pulse = 0.34 + 0.05 * Math.sin(now * 3);
-    g.circle(start.x * S, start.y * S, pulse * S)
-      .stroke({ width: 0.045 * S, color: COLORS.portalIn, alpha: 0.5 + 0.3 * Math.sin(now * 3) });
-    g.circle(end.x * S, end.y * S, pulse * S)
-      .stroke({ width: 0.045 * S, color: COLORS.portalOut, alpha: 0.5 + 0.3 * Math.cos(now * 2.6) });
+    for (const path of state.level.paths) {
+      const pts = path.map(cellCenter);
+      const start = pts[0]!;
+      const end = pts[pts.length - 1]!;
+      g.circle(start.x * S, start.y * S, pulse * S)
+        .stroke({ width: 0.045 * S, color: COLORS.portalIn, alpha: 0.5 + 0.3 * Math.sin(now * 3) });
+      g.circle(end.x * S, end.y * S, pulse * S)
+        .stroke({ width: 0.045 * S, color: COLORS.portalOut, alpha: 0.5 + 0.3 * Math.cos(now * 2.6) });
+    }
 
     // Selected tower: highlight + range ring.
     if (ui.selectedTowerId !== null) {
@@ -647,6 +743,7 @@ export class Renderer {
 
   /** Drop all per-entity views and effects (used on restart). */
   reset(): void {
+    this.shakeTime = 0;
     for (const view of this.towerViews.values()) view.c.destroy({ children: true });
     this.towerViews.clear();
     for (const view of this.enemyViews.values()) view.c.destroy({ children: true });

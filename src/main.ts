@@ -1,9 +1,22 @@
 import "./style.css";
+import { createMusic } from "./audio/music";
 import { createSfx } from "./audio/sfx";
 import { startLoop } from "./core/loop";
-import { loadSave, recordStars, starsForRun, writeSave } from "./core/save";
+import {
+  awardCurrency,
+  loadSave,
+  recordEndlessBest,
+  recordHardClear,
+  recordStars,
+  starsForRun,
+  writeSave,
+} from "./core/save";
 import { LEVELS } from "./data/levels";
 import type { LevelDef } from "./data/level01";
+import type { DifficultyId } from "./data/difficulty";
+import { ACHIEVEMENTS, type AchievementId } from "./data/achievements";
+import { metaUpgradeBonus } from "./data/metaUpgrades";
+import { refreshAchievements } from "./game/achievements";
 import {
   dailyDateStr,
   dailyRunSeed,
@@ -11,29 +24,45 @@ import {
   hashString,
   shareText,
 } from "./game/daily";
+import { createEndlessLevel } from "./game/endless";
 import { createGame, step, type GameState } from "./game/state";
 import { startWave } from "./game/waves";
 import { getSession, signOut, type Account } from "./net/auth";
-import { flushOutbox, mergeOnLogin, pushDaily, pushStars } from "./net/sync";
+import {
+  flushOutbox,
+  mergeOnLogin,
+  pushAchievement,
+  pushCurrency,
+  pushDaily,
+  pushMetaUpgrade,
+  pushStars,
+} from "./net/sync";
 import { Renderer } from "./render/renderer";
+import { createAchievementsScreen } from "./ui/achievements";
 import { createAuthScreen } from "./ui/auth";
 import { createHud, type BannerConfig } from "./ui/hud";
 import { createInput } from "./ui/input";
 import { createScreens } from "./ui/screens";
+import { createShopScreen } from "./ui/shop";
 
 type Mode =
   | { kind: "campaign"; index: number }
-  | { kind: "daily"; dateStr: string; practice: boolean };
+  | { kind: "daily"; dateStr: string; practice: boolean }
+  | { kind: "endless" };
 
 async function main(): Promise<void> {
   const save = loadSave();
   const sfx = createSfx(save.muted);
+  const music = createMusic(save.muted);
+  let lastWaveActive = false;
   const renderer = new Renderer();
   await renderer.init(document.getElementById("board")!, LEVELS[0]!);
 
   let mode: Mode | null = null;
   let state: GameState | null = null;
   let primaryAction: () => void = () => {};
+  let difficulty: DifficultyId = "normal";
+  let resetPlaybackControls: () => void = () => {};
 
   const ui = createInput(
     renderer,
@@ -45,32 +74,73 @@ async function main(): Promise<void> {
     },
   );
 
-  function play(level: LevelDef, seed: number, m: Mode): void {
+  function play(level: LevelDef, seed: number, m: Mode, diff: DifficultyId): void {
     mode = m;
-    state = createGame(level, seed);
+    state = createGame(level, seed, diff, metaUpgradeBonus(save.metaUpgrades));
     ui.selectedTowerId = null;
     renderer.setLevel(level);
     screens.hideAll();
+    resetPlaybackControls();
+    music.start();
+    lastWaveActive = false;
   }
 
   function startCampaign(index: number): void {
     const level = LEVELS[index]!;
-    play(level, hashString(`campaign:${level.id}`), { kind: "campaign", index });
+    play(level, hashString(`campaign:${level.id}`), { kind: "campaign", index }, difficulty);
   }
 
   function startDaily(): void {
     const dateStr = dailyDateStr();
-    play(generateDailyLevel(dateStr), dailyRunSeed(dateStr), {
-      kind: "daily",
-      dateStr,
-      practice: save.daily?.date === dateStr,
-    });
+    // Daily challenge results are compared across all players, so it always
+    // runs at normal difficulty regardless of the campaign picker.
+    play(
+      generateDailyLevel(dateStr),
+      dailyRunSeed(dateStr),
+      { kind: "daily", dateStr, practice: save.daily?.date === dateStr },
+      "normal",
+    );
+  }
+
+  function startEndless(): void {
+    const seed = Math.floor(Math.random() * 0x7fffffff);
+    // Endless always runs at Normal — difficulty scaling would just shift
+    // which wave you die on, and the escalating wave budget already does that.
+    play(createEndlessLevel(seed), seed, { kind: "endless" }, "normal");
   }
 
   const screens = createScreens({
     getSave: () => save,
     onPlayLevel: startCampaign,
     onPlayDaily: startDaily,
+    onPlayEndless: startEndless,
+    getDifficulty: () => difficulty,
+    onSetDifficulty: (d) => {
+      difficulty = d;
+    },
+  });
+
+  const shopScreen = createShopScreen({
+    getSave: () => save,
+    onChange: (upgradeId, tier) => {
+      if (account) {
+        pushMetaUpgrade(upgradeId, tier);
+        pushCurrency(save.currency);
+      }
+    },
+    onBack: () => screens.showMenu(),
+  });
+  const achievementsScreen = createAchievementsScreen({
+    getSave: () => save,
+    onBack: () => screens.showMenu(),
+  });
+  document.getElementById("btn-menu-shop")!.addEventListener("click", () => {
+    screens.hideAll();
+    shopScreen.show();
+  });
+  document.getElementById("btn-menu-achievements")!.addEventListener("click", () => {
+    screens.hideAll();
+    achievementsScreen.show();
   });
 
   let account: Account | null = null;
@@ -85,6 +155,9 @@ async function main(): Promise<void> {
       const merged = await mergeOnLogin(save);
       save.stars = merged.stars;
       save.daily = merged.daily;
+      save.currency = merged.currency;
+      save.metaUpgrades = merged.metaUpgrades;
+      save.achievements = { ...save.achievements, ...merged.achievements };
       writeSave(save);
       screens.showMenu();
     } catch {
@@ -132,6 +205,19 @@ async function main(): Promise<void> {
     if (account) void flushOutbox();
   });
 
+  /** " · 🏅 New: Foo, Bar" for any achievements this run just unlocked. */
+  function achievementNote(unlocked: AchievementId[]): string {
+    if (unlocked.length === 0) return "";
+    return ` · 🏅 New: ${unlocked.map((id) => ACHIEVEMENTS[id].name).join(", ")}`;
+  }
+
+  /** Pushes currency and any newly unlocked achievements when signed in. */
+  function syncProgress(unlocked: AchievementId[]): void {
+    if (!account) return;
+    pushCurrency(save.currency);
+    for (const id of unlocked) pushAchievement(id);
+  }
+
   function onGameOver(st: GameState): BannerConfig {
     const won = st.status === "won";
     const { startLives, waves } = st.level;
@@ -142,13 +228,21 @@ async function main(): Promise<void> {
         const stars = starsForRun(st.lives, startLives);
         recordStars(save, st.level.id, stars);
         if (account) pushStars(st.level.id, save.stars[st.level.id]!);
+        if (difficulty === "hard") recordHardClear(save, st.level.id);
+        const gems = 8 + stars * 4;
+        awardCurrency(save, gems);
+        const unlocked = refreshAchievements(save);
+        writeSave(save);
+        syncProgress(unlocked);
         const hasNext = index + 1 < LEVELS.length;
         primaryAction = hasNext
           ? () => startCampaign(index + 1)
           : () => screens.showLevels();
         return {
           title: "🏆 Victory!",
-          sub: `${"⭐".repeat(stars)}${"☆".repeat(3 - stars)}  ${st.lives}/${startLives} lives`,
+          sub:
+            `${"⭐".repeat(stars)}${"☆".repeat(3 - stars)}  ${st.lives}/${startLives} lives · +${gems}💎` +
+            achievementNote(unlocked),
           primaryLabel: hasNext ? "▶ Next level" : "Level select",
         };
       }
@@ -160,21 +254,45 @@ async function main(): Promise<void> {
       };
     }
 
+    if (mode?.kind === "endless") {
+      const wavesReached = st.waveIndex + 1;
+      recordEndlessBest(save, wavesReached);
+      const gems = Math.floor(wavesReached / 2);
+      awardCurrency(save, gems);
+      const unlocked = refreshAchievements(save);
+      writeSave(save);
+      syncProgress(unlocked);
+      primaryAction = () => startEndless();
+      return {
+        title: "💀 Overrun!",
+        sub: `Reached wave ${wavesReached} · best ${save.bestEndlessWave} · +${gems}💎${achievementNote(unlocked)}`,
+        primaryLabel: "↻ Try again",
+      };
+    }
+
     // Daily
     const { dateStr, practice } = mode as Extract<Mode, { kind: "daily" }>;
     const stars = won ? starsForRun(st.lives, startLives) : 0;
     const wavesCleared = won ? waves.length : st.waveIndex;
+    let unlocked: AchievementId[] = [];
+    let gems = 0;
     if (!practice) {
       save.daily = { date: dateStr, won, livesLeft: st.lives, stars };
+      if (won) {
+        gems = 10 + stars * 5;
+        awardCurrency(save, gems);
+      }
+      unlocked = refreshAchievements(save);
       writeSave(save);
       if (account) pushDaily(save.daily);
+      syncProgress(unlocked);
     }
     primaryAction = () => startDaily();
     return {
       title: won ? "🏆 Daily cleared!" : "💀 Daily lost",
       sub: practice
         ? "Practice run — not recorded."
-        : `Your result for today is locked in.`,
+        : `Your result for today is locked in.${gems ? ` +${gems}💎` : ""}${achievementNote(unlocked)}`,
       primaryLabel: practice ? "↻ Practice again" : "↻ Practice run",
       shareText: practice
         ? undefined
@@ -206,13 +324,14 @@ async function main(): Promise<void> {
         save.muted = !save.muted;
         writeSave(save);
         sfx.setMuted(save.muted);
+        music.setMuted(save.muted);
         return save.muted;
       },
       initialMuted: save.muted,
     },
   );
 
-  const { stats } = startLoop(
+  const loop = startLoop(
     () => state && step(state),
     () => {
       if (!state) return;
@@ -221,9 +340,39 @@ async function main(): Promise<void> {
       if (events.impacts || events.splashes) sfx.play("hit");
       if (events.deaths) sfx.play("death");
       if (events.leaks) sfx.play("leak");
-      hud.update(state, stats);
+      if (events.bossSpawns) sfx.play("bossSpawn");
+      if (state.waveActive !== lastWaveActive) {
+        lastWaveActive = state.waveActive;
+        music.setIntense(lastWaveActive);
+      }
+      hud.update(state, loop.stats);
     },
   );
+
+  const SPEEDS = [1, 2, 3];
+  let speedIdx = 0;
+  let paused = false;
+
+  const btnPause = document.getElementById("btn-pause") as HTMLButtonElement;
+  const btnSpeed = document.getElementById("btn-speed") as HTMLButtonElement;
+  btnPause.addEventListener("click", () => {
+    paused = !paused;
+    loop.setPaused(paused);
+    btnPause.textContent = paused ? "▶" : "⏸";
+  });
+  btnSpeed.addEventListener("click", () => {
+    speedIdx = (speedIdx + 1) % SPEEDS.length;
+    loop.setTimeScale(SPEEDS[speedIdx]!);
+    btnSpeed.textContent = `${SPEEDS[speedIdx]}x`;
+  });
+  resetPlaybackControls = () => {
+    paused = false;
+    speedIdx = 0;
+    loop.setPaused(false);
+    loop.setTimeScale(1);
+    btnPause.textContent = "⏸";
+    btnSpeed.textContent = "1x";
+  };
 
   // Read-only debug handle for automated verification.
   (window as unknown as Record<string, unknown>).__td = {
@@ -232,10 +381,12 @@ async function main(): Promise<void> {
     },
   };
 
-  // Deep link for testing/sharing: ?level=L3 or ?daily=1
+  // Deep link for testing/sharing: ?level=L3, ?daily=1, or ?endless=1
   const params = new URLSearchParams(location.search);
   if (params.get("daily")) {
     startDaily();
+  } else if (params.get("endless")) {
+    startEndless();
   } else if (params.get("level")) {
     const i = LEVELS.findIndex((l) => l.id === params.get("level"));
     if (i >= 0) startCampaign(i);

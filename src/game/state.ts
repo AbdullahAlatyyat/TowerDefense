@@ -1,12 +1,13 @@
 import {
   buildTrack,
   cellKey,
-  expandPathCells,
+  unionPathCells,
   type PathTrack,
 } from "../core/grid";
 import { createRng, type Rng } from "../core/rng";
 import type { LevelDef } from "../data/level01";
 import type { EnemyTypeId } from "../data/enemies";
+import { DIFFICULTIES, type DifficultyId } from "../data/difficulty";
 import {
   SELL_REFUND,
   TOWERS,
@@ -20,6 +21,8 @@ import { checkWaveEnd } from "./waves";
 export interface Enemy {
   id: number;
   type: EnemyTypeId;
+  /** index into GameState.tracks — which lane this enemy is following */
+  laneIndex: number;
   /** distance travelled along the path track, in cells */
   dist: number;
   x: number;
@@ -34,6 +37,13 @@ export interface Enemy {
   /** brittle mark (frost Brittle path): bonus damage taken from all sources */
   brittleUntilTick: number;
   brittleBonus: number;
+  /** current/max shield pool (Warden); 0 for enemies without a shield */
+  shieldHp: number;
+  shieldMax: number;
+  /** tick this enemy last took damage, for shield-regen delay */
+  lastHitTick: number;
+  /** bumped whenever hp actually decreases; renderer diffs it for a hit-flash */
+  hitSeq: number;
 }
 
 export interface Tower {
@@ -77,7 +87,8 @@ export interface GameState {
   level: LevelDef;
   rng: Rng;
   seed: number;
-  track: PathTrack;
+  difficulty: DifficultyId;
+  tracks: PathTrack[];
   pathCells: Set<number>;
   occupied: Set<number>;
 
@@ -101,18 +112,32 @@ export interface GameState {
   nextId: number;
 }
 
-export function createGame(level: LevelDef, seed: number): GameState {
+/** Flat bonuses from owned meta-upgrades, applied on top of the difficulty scalar. */
+export interface MetaBonus {
+  goldBonus: number;
+  livesBonus: number;
+}
+
+const NO_META_BONUS: MetaBonus = { goldBonus: 0, livesBonus: 0 };
+
+export function createGame(
+  level: LevelDef,
+  seed: number,
+  difficulty: DifficultyId = "normal",
+  metaBonus: MetaBonus = NO_META_BONUS,
+): GameState {
   return {
     level,
     rng: createRng(seed),
     seed,
-    track: buildTrack(level.path),
-    pathCells: expandPathCells(level.path),
+    difficulty,
+    tracks: level.paths.map((p) => buildTrack(p)),
+    pathCells: unionPathCells(level.paths),
     occupied: new Set(),
     tick: 0,
     status: "playing",
-    gold: level.startGold,
-    lives: level.startLives,
+    gold: Math.round(level.startGold * DIFFICULTIES[difficulty].goldMul) + metaBonus.goldBonus,
+    lives: level.startLives + metaBonus.livesBonus,
     waveIndex: -1,
     waveActive: false,
     groupIndex: 0,

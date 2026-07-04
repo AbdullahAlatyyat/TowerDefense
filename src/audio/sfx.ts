@@ -1,8 +1,5 @@
-/**
- * Synthesized sound effects — zero asset files. The AudioContext is created
- * lazily on the first play() so it always starts from a user gesture
- * (mobile browsers block audio otherwise).
- */
+/** Synthesized sound effects — zero asset files. */
+import { ensureAudioContext } from "./context";
 
 export type SfxName =
   | "shot"
@@ -13,7 +10,8 @@ export type SfxName =
   | "upgrade"
   | "sell"
   | "win"
-  | "lose";
+  | "lose"
+  | "bossSpawn";
 
 export interface Sfx {
   play(name: SfxName): void;
@@ -63,6 +61,10 @@ const DEFS: Record<SfxName, Note[]> = {
     { f0: 220, f1: 180, dur: 0.25, type: "sawtooth", gain: 0.14 },
     { f0: 180, f1: 110, dur: 0.45, at: 0.22, type: "sawtooth", gain: 0.14 },
   ],
+  bossSpawn: [
+    { f0: 90, f1: 55, dur: 0.5, type: "sawtooth", gain: 0.16 },
+    { f0: 180, f1: 60, dur: 0.35, at: 0.05, type: "square", gain: 0.08 },
+  ],
 };
 
 /** Per-sound minimum re-trigger interval (ms) so busy waves don't buzz. */
@@ -73,21 +75,8 @@ const THROTTLE_MS: Partial<Record<SfxName, number>> = {
 };
 
 export function createSfx(initialMuted: boolean): Sfx {
-  let ctx: AudioContext | null = null;
   let muted = initialMuted;
   const lastPlayed = new Map<SfxName, number>();
-
-  const ensureCtx = (): AudioContext | null => {
-    if (!ctx) {
-      try {
-        ctx = new AudioContext();
-      } catch {
-        return null;
-      }
-    }
-    if (ctx.state === "suspended") void ctx.resume();
-    return ctx;
-  };
 
   return {
     play(name) {
@@ -97,7 +86,7 @@ export function createSfx(initialMuted: boolean): Sfx {
       if (throttle && now - (lastPlayed.get(name) ?? 0) < throttle) return;
       lastPlayed.set(name, now);
 
-      const ac = ensureCtx();
+      const ac = ensureAudioContext();
       if (!ac) return;
       for (const note of DEFS[name]) {
         const start = ac.currentTime + (note.at ?? 0);

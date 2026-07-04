@@ -13,18 +13,36 @@ export interface LoopStats {
   tickMs: number;
 }
 
+export interface LoopControls {
+  stats: LoopStats;
+  /** Ticks-per-rendered-frame multiplier; does not change TICK_DT itself. */
+  setTimeScale(scale: number): void;
+  setPaused(paused: boolean): void;
+}
+
 export function startLoop(
   update: () => void,
   render: () => void,
-): { stats: LoopStats } {
+): LoopControls {
   const stats: LoopStats = { fps: 0, tickMs: 0 };
   let last = performance.now();
   let accumulator = 0;
   let fpsCount = 0;
   let fpsWindowStart = last;
+  let timeScale = 1;
+  let paused = false;
 
   const frame = (now: number) => {
-    accumulator += Math.min((now - last) / 1000, MAX_FRAME_TIME);
+    if (paused) {
+      // Drop any elapsed wall-time while paused so resuming doesn't burst-tick.
+      last = now;
+      render();
+      requestAnimationFrame(frame);
+      return;
+    }
+
+    accumulator +=
+      Math.min((now - last) / 1000, MAX_FRAME_TIME) * timeScale;
     last = now;
 
     const tickStart = performance.now();
@@ -47,5 +65,13 @@ export function startLoop(
     requestAnimationFrame(frame);
   };
   requestAnimationFrame(frame);
-  return { stats };
+  return {
+    stats,
+    setTimeScale(scale) {
+      timeScale = scale;
+    },
+    setPaused(p) {
+      paused = p;
+    },
+  };
 }

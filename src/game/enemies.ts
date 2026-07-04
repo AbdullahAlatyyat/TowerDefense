@@ -1,6 +1,7 @@
 import { TICK_DT } from "../core/loop";
 import { pointAtDistance } from "../core/grid";
 import { ENEMIES } from "../data/enemies";
+import { DIFFICULTIES } from "../data/difficulty";
 import type { GameState } from "./state";
 
 /** Spawns the current wave's groups sequentially. */
@@ -22,22 +23,33 @@ export function updateSpawner(state: GameState): void {
 
   const group = wave.groups[state.groupIndex]!;
   const def = ENEMIES[group.enemy];
-  const start = pointAtDistance(state.track, 0);
+  const laneIndex = group.path ?? 0;
+  const start = pointAtDistance(state.tracks[laneIndex]!, 0);
+  const hp = Math.max(
+    1,
+    Math.round(group.hp * def.hpMul * DIFFICULTIES[state.difficulty].hpMul),
+  );
+  const shieldMax = def.shieldFrac ? Math.round(hp * def.shieldFrac) : 0;
   state.enemies.push({
     id: state.nextId++,
     type: group.enemy,
+    laneIndex,
     dist: 0,
     x: start.x,
     y: start.y,
     // small seeded variation so the column of enemies breaks up naturally
     speed: def.speed * state.rng.range(0.92, 1.08),
-    hp: Math.max(1, Math.round(group.hp * def.hpMul)),
-    maxHp: Math.max(1, Math.round(group.hp * def.hpMul)),
+    hp,
+    maxHp: hp,
     bounty: def.bounty,
     slowUntilTick: 0,
     slowFactor: 1,
     brittleUntilTick: 0,
     brittleBonus: 0,
+    shieldHp: shieldMax,
+    shieldMax,
+    lastHitTick: -Infinity,
+    hitSeq: 0,
   });
   state.spawnRemaining--;
   state.nextSpawnTick = state.tick + group.spawnInterval;
@@ -46,13 +58,26 @@ export function updateSpawner(state: GameState): void {
 export function updateEnemies(state: GameState): void {
   const survivors: typeof state.enemies = [];
   for (const enemy of state.enemies) {
+    const def = ENEMIES[enemy.type];
+    if (def.regenPerTick) {
+      enemy.hp = Math.min(enemy.maxHp, enemy.hp + def.regenPerTick);
+    }
+    if (
+      enemy.shieldMax > 0 &&
+      enemy.shieldHp < enemy.shieldMax &&
+      state.tick - enemy.lastHitTick >= (def.shieldRegenDelayTicks ?? 0)
+    ) {
+      enemy.shieldHp = Math.min(enemy.shieldMax, enemy.shieldHp + enemy.shieldMax / 60);
+    }
+
+    const track = state.tracks[enemy.laneIndex]!;
     const slowed = state.tick < enemy.slowUntilTick;
     enemy.dist += enemy.speed * (slowed ? enemy.slowFactor : 1) * TICK_DT;
-    if (enemy.dist >= state.track.length) {
+    if (enemy.dist >= track.length) {
       state.lives--;
       continue;
     }
-    const p = pointAtDistance(state.track, enemy.dist);
+    const p = pointAtDistance(track, enemy.dist);
     enemy.x = p.x;
     enemy.y = p.y;
     survivors.push(enemy);

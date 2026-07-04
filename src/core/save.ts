@@ -9,16 +9,38 @@ export interface DailyRecord {
 }
 
 export interface SaveData {
-  version: 1;
+  version: 2;
   /** levelId → best stars earned (0–3) */
   stars: Record<string, number>;
   muted: boolean;
   daily: DailyRecord | null;
+  /** persistent meta-currency, spent on metaUpgrades — distinct from in-run gold */
+  currency: number;
+  /** MetaUpgradeId → tier owned (0 = none) */
+  metaUpgrades: Record<string, number>;
+  /** AchievementId → unlocked */
+  achievements: Record<string, true>;
+  /** best wave reached in Endless mode */
+  bestEndlessWave: number;
+  /** levelId → ever won on Hard difficulty */
+  hardClears: Record<string, boolean>;
 }
 
 const KEY = "towerdefense-save";
+/** Phase-3 stopgap key, folded into bestEndlessWave below and then removed. */
+const LEGACY_ENDLESS_KEY = "towerdefense-endless-best";
 
-const DEFAULTS: SaveData = { version: 1, stars: {}, muted: false, daily: null };
+const DEFAULTS: SaveData = {
+  version: 2,
+  stars: {},
+  muted: false,
+  daily: null,
+  currency: 0,
+  metaUpgrades: {},
+  achievements: {},
+  bestEndlessWave: 0,
+  hardClears: {},
+};
 
 /**
  * Upgrades a parsed-but-unvalidated save blob to the current SaveData shape.
@@ -28,20 +50,48 @@ const DEFAULTS: SaveData = { version: 1, stars: {}, muted: false, daily: null };
 function migrateSave(raw: unknown): SaveData {
   if (!raw || typeof raw !== "object") return structuredClone(DEFAULTS);
   const data = raw as Partial<SaveData> & { version?: unknown };
+  if (data.version === 2) {
+    return { ...structuredClone(DEFAULTS), ...data, version: 2 };
+  }
   if (data.version === 1) {
-    return { ...structuredClone(DEFAULTS), ...data, version: 1 };
+    // v1 only had stars/muted/daily — carry those forward, default the rest.
+    return {
+      ...structuredClone(DEFAULTS),
+      stars: data.stars ?? {},
+      muted: data.muted ?? false,
+      daily: data.daily ?? null,
+      version: 2,
+    };
   }
   return structuredClone(DEFAULTS);
 }
 
 export function loadSave(): SaveData {
+  let save: SaveData;
   try {
     const raw = localStorage.getItem(KEY);
-    if (!raw) return structuredClone(DEFAULTS);
-    return migrateSave(JSON.parse(raw));
+    save = raw ? migrateSave(JSON.parse(raw)) : structuredClone(DEFAULTS);
   } catch {
-    return structuredClone(DEFAULTS);
+    save = structuredClone(DEFAULTS);
   }
+
+  // One-time fold-in of the Endless best-wave stopgap key from before the
+  // save schema had a field for it.
+  try {
+    const legacy = localStorage.getItem(LEGACY_ENDLESS_KEY);
+    if (legacy !== null) {
+      const legacyBest = Number(legacy);
+      if (legacyBest > save.bestEndlessWave) {
+        save.bestEndlessWave = legacyBest;
+        writeSave(save);
+      }
+      localStorage.removeItem(LEGACY_ENDLESS_KEY);
+    }
+  } catch {
+    // storage blocked — nothing to migrate
+  }
+
+  return save;
 }
 
 export function writeSave(data: SaveData): void {
@@ -63,6 +113,32 @@ export function starsForRun(livesLeft: number, startLives: number): number {
 export function recordStars(save: SaveData, levelId: string, stars: number): void {
   if ((save.stars[levelId] ?? 0) < stars) {
     save.stars[levelId] = stars;
+    writeSave(save);
+  }
+}
+
+export function awardCurrency(save: SaveData, amount: number): void {
+  save.currency += amount;
+  writeSave(save);
+}
+
+export function spendCurrency(save: SaveData, amount: number): boolean {
+  if (save.currency < amount) return false;
+  save.currency -= amount;
+  writeSave(save);
+  return true;
+}
+
+export function recordEndlessBest(save: SaveData, wavesReached: number): void {
+  if (wavesReached > save.bestEndlessWave) {
+    save.bestEndlessWave = wavesReached;
+    writeSave(save);
+  }
+}
+
+export function recordHardClear(save: SaveData, levelId: string): void {
+  if (!save.hardClears[levelId]) {
+    save.hardClears[levelId] = true;
     writeSave(save);
   }
 }

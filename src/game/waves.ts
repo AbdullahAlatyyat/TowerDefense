@@ -1,3 +1,5 @@
+import { generateEndlessWave } from "./endless";
+import type { WaveDef } from "../data/level01";
 import type { GameState } from "./state";
 
 export function canStartWave(state: GameState): boolean {
@@ -28,6 +30,11 @@ export function checkWaveEnd(state: GameState): void {
   if (!spawningDone || state.enemies.length > 0) return;
   state.waveActive = false;
   if (state.waveIndex >= state.level.waves.length - 1) {
-    state.status = "won";
+    if (state.level.endless) {
+      const next = generateEndlessWave(state.waveIndex + 1, state.rng);
+      (state.level.waves as WaveDef[]).push(next);
+    } else {
+      state.status = "won";
+    }
   }
 }

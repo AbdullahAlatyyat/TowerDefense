@@ -1,4 +1,5 @@
 import type { LoopStats } from "../core/loop";
+import { ENEMIES } from "../data/enemies";
 import { TOWER_ORDER, TOWERS } from "../data/towers";
 import {
   sellTower,
@@ -62,11 +63,17 @@ export function createHud(
   getState: () => GameState,
   cb: HudCallbacks,
 ): Hud {
-  const lives = el("stat-lives").querySelector("b")!;
+  const livesStat = el("stat-lives");
+  const lives = livesStat.querySelector("b")!;
   const gold = el("stat-gold").querySelector("b")!;
   const wave = el("stat-wave").querySelector("b")!;
+  let lastLives = -1;
+  let lastGold = -1;
   const btnWave = el<HTMLButtonElement>("btn-wave");
   const dock = el("dock");
+  const bossBar = el("boss-bar");
+  const bossBarName = el("boss-bar-name");
+  const bossBarFill = el("boss-bar-fill");
   const banner = el("banner");
   const bannerTitle = el("banner-title");
   const bannerSub = el("banner-sub");
@@ -137,12 +144,50 @@ export function createHud(
   });
 
   let bannerShown = false;
+  let panelShown = false;
+
+  /** Restart a one-shot CSS animation by toggling its class off then on. */
+  function pulse(target: HTMLElement): void {
+    target.classList.remove("pulse");
+    void target.offsetWidth;
+    target.classList.add("pulse");
+  }
+
+  function setPanelVisible(visible: boolean): void {
+    if (panelShown === visible) return;
+    panelShown = visible;
+    if (visible) {
+      panel.hidden = false;
+      void panel.offsetWidth;
+      panel.classList.add("visible");
+    } else {
+      panel.classList.remove("visible");
+      window.setTimeout(() => {
+        if (!panelShown) panel.hidden = true;
+      }, 180);
+    }
+  }
 
   return {
     update(state, stats) {
+      if (lastLives >= 0 && state.lives !== lastLives) pulse(lives);
+      if (lastGold >= 0 && state.gold !== lastGold) pulse(gold);
+      lastLives = state.lives;
+      lastGold = state.gold;
       lives.textContent = String(state.lives);
       gold.textContent = String(state.gold);
       wave.textContent = `${state.waveIndex + 1}/${state.level.waves.length}`;
+      livesStat.classList.toggle(
+        "warn",
+        state.status === "playing" && state.lives > 0 && state.lives <= state.level.startLives * 0.2,
+      );
+
+      const boss = state.enemies.find((e) => ENEMIES[e.type].isBoss);
+      bossBar.hidden = !boss;
+      if (boss) {
+        bossBarName.textContent = ENEMIES[boss.type].name;
+        bossBarFill.style.width = `${Math.max(0, (boss.hp / boss.maxHp) * 100)}%`;
+      }
 
       btnWave.disabled = !canStartWave(state);
       btnWave.textContent = state.waveActive
@@ -175,13 +220,18 @@ export function createHud(
         shareTextEl.hidden = !config.shareText;
         shareTextEl.textContent = config.shareText ?? "";
         banner.hidden = false;
+        void banner.offsetWidth;
+        banner.classList.add("visible");
         console.log(
           `[determinism] seed=${state.seed} tick=${state.tick} ` +
             `gold=${state.gold} lives=${state.lives} status=${state.status}`,
         );
       } else if (!over && bannerShown) {
         bannerShown = false;
-        banner.hidden = true;
+        banner.classList.remove("visible");
+        window.setTimeout(() => {
+          if (!bannerShown) banner.hidden = true;
+        }, 200);
       }
     },
   };
@@ -192,10 +242,10 @@ export function createHud(
       if (getUi().selectedTowerId !== null && !tower) {
         getUi().selectedTowerId = null; // tower was sold/removed
       }
-      panel.hidden = true;
+      setPanelVisible(false);
       return;
     }
-    panel.hidden = false;
+    setPanelVisible(true);
     const def = TOWERS[tower.type];
     const stats = towerStats(tower);
     panelName.textContent = `${def.icon} ${def.name}`;
