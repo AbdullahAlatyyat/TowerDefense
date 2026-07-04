@@ -89,7 +89,7 @@ export const ENEMIES: Record<EnemyTypeId, EnemyDef> = {
     radius: 0.36,
     color: 0x94a3b8,
     edgeColor: 0x475569,
-    armor: 2,
+    armor: 1,
   },
   wisp: {
     id: "wisp",
@@ -111,7 +111,7 @@ export const ENEMIES: Record<EnemyTypeId, EnemyDef> = {
     radius: 0.32,
     color: 0x2dd4bf,
     edgeColor: 0x0f766e,
-    regenPerTick: 0.12,
+    regenPerTick: 0.08,
   },
   warden: {
     id: "warden",
@@ -145,8 +145,8 @@ export const ENEMIES: Record<EnemyTypeId, EnemyDef> = {
     radius: 0.46,
     color: 0x7c2d92,
     edgeColor: 0x3f1548,
-    armor: 3,
-    regenPerTick: 0.2,
+    armor: 1,
+    regenPerTick: 0.06,
     isBoss: true,
   },
 };
