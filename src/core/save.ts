@@ -11,7 +11,7 @@ export interface DailyRecord {
 }
 
 export interface SaveData {
-  version: 5;
+  version: 6;
   /** levelId → best stars earned (0–3) */
   stars: Record<string, number>;
   muted: boolean;
@@ -38,6 +38,8 @@ export interface SaveData {
   mutatorClears: Record<string, boolean>;
   /** lifetime count of enemies killed by a non-physical damage type (poison/lightning) */
   elementalKills: number;
+  /** persistent lifetime XP for the hero unit (kills, across every run ever played) */
+  heroXp: number;
 }
 
 const KEY = "towerdefense-save";
@@ -45,7 +47,7 @@ const KEY = "towerdefense-save";
 const LEGACY_ENDLESS_KEY = "towerdefense-endless-best";
 
 const DEFAULTS: SaveData = {
-  version: 5,
+  version: 6,
   stars: {},
   muted: false,
   sfxVolume: 1,
@@ -60,6 +62,7 @@ const DEFAULTS: SaveData = {
   hardClears: {},
   mutatorClears: {},
   elementalKills: 0,
+  heroXp: 0,
 };
 
 /**
@@ -70,20 +73,24 @@ const DEFAULTS: SaveData = {
 function migrateSave(raw: unknown): SaveData {
   if (!raw || typeof raw !== "object") return structuredClone(DEFAULTS);
   const data = raw as Partial<SaveData> & { version?: unknown };
+  if (data.version === 6) {
+    return { ...structuredClone(DEFAULTS), ...data, version: 6 };
+  }
   if (data.version === 5) {
-    return { ...structuredClone(DEFAULTS), ...data, version: 5 };
+    // v5 lacked heroXp — default it in.
+    return { ...structuredClone(DEFAULTS), ...data, version: 6 };
   }
   if (data.version === 4) {
     // v4 lacked elementalKills — default it in.
-    return { ...structuredClone(DEFAULTS), ...data, version: 5 };
+    return { ...structuredClone(DEFAULTS), ...data, version: 6 };
   }
   if (data.version === 3) {
     // v3 lacked mutatorClears — default it in.
-    return { ...structuredClone(DEFAULTS), ...data, version: 5 };
+    return { ...structuredClone(DEFAULTS), ...data, version: 6 };
   }
   if (data.version === 2) {
     // v2 lacked sfxVolume/musicVolume/haptics/tutorialSeen — default those in.
-    return { ...structuredClone(DEFAULTS), ...data, version: 5 };
+    return { ...structuredClone(DEFAULTS), ...data, version: 6 };
   }
   if (data.version === 1) {
     // v1 only had stars/muted/daily — carry those forward, default the rest.
@@ -92,7 +99,7 @@ function migrateSave(raw: unknown): SaveData {
       stars: data.stars ?? {},
       muted: data.muted ?? false,
       daily: data.daily ?? null,
-      version: 5,
+      version: 6,
     };
   }
   return structuredClone(DEFAULTS);
@@ -192,4 +199,11 @@ export function recordElementalKills(save: SaveData, count: number): void {
   if (count <= 0) return;
   save.elementalKills += count;
   writeSave(save);
+}
+
+export function recordHeroXp(save: SaveData, xp: number): void {
+  if (xp > save.heroXp) {
+    save.heroXp = xp;
+    writeSave(save);
+  }
 }

@@ -8,6 +8,7 @@ interface MergedState {
   metaUpgrades: Record<string, number>;
   achievements: Record<string, true>;
   bestEndlessWave: number;
+  heroXp: number;
 }
 
 /** Merges local guest progress into the account and returns the authoritative merged state. */
@@ -21,6 +22,7 @@ export async function mergeOnLogin(save: SaveData): Promise<MergedState> {
       metaUpgrades: save.metaUpgrades,
       achievements: save.achievements,
       bestEndlessWave: save.bestEndlessWave,
+      heroXp: save.heroXp,
     }),
   });
 }
@@ -37,7 +39,8 @@ type OutboxEntry =
   | { type: "currency"; key: string; currency: number }
   | { type: "metaUpgrade"; key: string; upgradeId: string; tier: number }
   | { type: "achievement"; key: string; achievementId: string }
-  | { type: "endless"; key: string; bestEndlessWave: number };
+  | { type: "endless"; key: string; bestEndlessWave: number }
+  | { type: "hero"; key: string; heroXp: number };
 
 const OUTBOX_KEY = "towerdefense-outbox";
 
@@ -92,6 +95,9 @@ async function sendEntry(entry: OutboxEntry): Promise<void> {
         method: "POST",
         body: JSON.stringify({ bestEndlessWave: entry.bestEndlessWave }),
       });
+      break;
+    case "hero":
+      await apiFetch("/hero", { method: "POST", body: JSON.stringify({ heroXp: entry.heroXp }) });
       break;
   }
 }
@@ -149,6 +155,13 @@ export function pushAchievement(achievementId: string): void {
 export function pushEndless(wavesReached: number): void {
   const entry: OutboxEntry = { type: "endless", key: "endless", bestEndlessWave: wavesReached };
   apiFetch("/endless", { method: "POST", body: JSON.stringify({ bestEndlessWave: wavesReached }) }).catch(() => {
+    enqueue(entry);
+  });
+}
+
+export function pushHeroXp(heroXp: number): void {
+  const entry: OutboxEntry = { type: "hero", key: "hero", heroXp };
+  apiFetch("/hero", { method: "POST", body: JSON.stringify({ heroXp }) }).catch(() => {
     enqueue(entry);
   });
 }

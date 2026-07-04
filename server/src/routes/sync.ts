@@ -20,6 +20,7 @@ const syncBodySchema = z.object({
   metaUpgrades: z.record(z.string(), z.number().int().min(0)).default({}),
   achievements: z.record(z.string(), z.literal(true)).default({}),
   bestEndlessWave: z.number().int().min(0).default(0),
+  heroXp: z.number().int().min(0).default(0),
 });
 
 async function loadMergedState(userId: number, todayDate: string | null) {
@@ -50,6 +51,7 @@ async function loadMergedState(userId: number, todayDate: string | null) {
     metaUpgrades: metaUpgradesOut,
     achievements: achievementsOut,
     bestEndlessWave: user.bestEndlessWave,
+    heroXp: user.heroXp,
   };
 }
 
@@ -62,7 +64,7 @@ syncRouter.post("/sync", async (req, res) => {
     return;
   }
   const userId = (req as AuthedRequest).userId;
-  const { stars, daily, currency, metaUpgrades, achievements, bestEndlessWave } = parsed.data;
+  const { stars, daily, currency, metaUpgrades, achievements, bestEndlessWave, heroXp } = parsed.data;
 
   await prisma.$transaction(async (tx) => {
     for (const [levelId, incomingStars] of Object.entries(stars)) {
@@ -82,14 +84,19 @@ syncRouter.post("/sync", async (req, res) => {
         update: {}, // first-write-wins: never overwrite an existing day's result
       });
     }
-    // Currency and Endless best-wave: take the higher of the two, same "never regress" rule as stars.
+    // Currency, Endless best-wave, and hero XP: take the higher of the two, same "never regress" rule as stars.
     const user = await tx.user.findUniqueOrThrow({ where: { id: userId } });
     const nextCurrency = Math.max(user.currency, currency);
     const nextBestEndlessWave = Math.max(user.bestEndlessWave, bestEndlessWave);
-    if (nextCurrency > user.currency || nextBestEndlessWave > user.bestEndlessWave) {
+    const nextHeroXp = Math.max(user.heroXp, heroXp);
+    if (
+      nextCurrency > user.currency ||
+      nextBestEndlessWave > user.bestEndlessWave ||
+      nextHeroXp > user.heroXp
+    ) {
       await tx.user.update({
         where: { id: userId },
-        data: { currency: nextCurrency, bestEndlessWave: nextBestEndlessWave },
+        data: { currency: nextCurrency, bestEndlessWave: nextBestEndlessWave, heroXp: nextHeroXp },
       });
     }
     for (const [upgradeId, incomingTier] of Object.entries(metaUpgrades)) {
@@ -180,6 +187,21 @@ syncRouter.post("/endless", async (req, res) => {
     await prisma.user.update({ where: { id: userId }, data: { bestEndlessWave: finalWave } });
   }
   res.json({ bestEndlessWave: finalWave });
+});
+
+syncRouter.post("/hero", async (req, res) => {
+  const parsed = z.object({ heroXp: z.number().int().min(0) }).safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "invalid_input" });
+    return;
+  }
+  const userId = (req as AuthedRequest).userId;
+  const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
+  const finalXp = Math.max(user.heroXp, parsed.data.heroXp);
+  if (finalXp > user.heroXp) {
+    await prisma.user.update({ where: { id: userId }, data: { heroXp: finalXp } });
+  }
+  res.json({ heroXp: finalXp });
 });
 
 syncRouter.post("/metaUpgrade", async (req, res) => {

@@ -57,7 +57,7 @@ export interface UpgradeTier {
 
 export interface UpgradePath {
   name: string;
-  tiers: [UpgradeTier, UpgradeTier];
+  tiers: [UpgradeTier, UpgradeTier, UpgradeTier];
 }
 
 export interface TowerDef {
@@ -102,6 +102,11 @@ export const TOWERS: Record<TowerTypeId, TowerDef> = {
             label: "Minigun",
             stats: { damage: 2, range: 2.4, cooldownTicks: 7, projectileSpeed: 11 },
           },
+          {
+            cost: 130,
+            label: "Hyperspool",
+            stats: { damage: 3, range: 2.4, cooldownTicks: 4, projectileSpeed: 13 },
+          },
         ],
       },
       {
@@ -116,6 +121,11 @@ export const TOWERS: Record<TowerTypeId, TowerDef> = {
             cost: 80,
             label: "Railshot",
             stats: { damage: 7, range: 2.7, cooldownTicks: 18, projectileSpeed: 12 },
+          },
+          {
+            cost: 140,
+            label: "Armor Crusher",
+            stats: { damage: 12, range: 2.9, cooldownTicks: 18, projectileSpeed: 13 },
           },
         ],
       },
@@ -164,6 +174,17 @@ export const TOWERS: Record<TowerTypeId, TowerDef> = {
               splashRadius: 1.75,
             },
           },
+          {
+            cost: 150,
+            label: "Devastation",
+            stats: {
+              damage: 5,
+              range: 2.5,
+              cooldownTicks: 36,
+              projectileSpeed: 7,
+              splashRadius: 2.2,
+            },
+          },
         ],
       },
       {
@@ -187,6 +208,17 @@ export const TOWERS: Record<TowerTypeId, TowerDef> = {
               damage: 11,
               range: 2.2,
               cooldownTicks: 40,
+              projectileSpeed: 7,
+              splashRadius: 1.0,
+            },
+          },
+          {
+            cost: 160,
+            label: "Siege Round",
+            stats: {
+              damage: 18,
+              range: 2.2,
+              cooldownTicks: 42,
               projectileSpeed: 7,
               splashRadius: 1.0,
             },
@@ -241,6 +273,18 @@ export const TOWERS: Record<TowerTypeId, TowerDef> = {
               slowTicks: 75,
             },
           },
+          {
+            cost: 140,
+            label: "Cryogenic Core",
+            stats: {
+              damage: 3,
+              range: 2.8,
+              cooldownTicks: 24,
+              projectileSpeed: 8,
+              slowFactor: 0.18,
+              slowTicks: 90,
+            },
+          },
         ],
       },
       {
@@ -274,6 +318,20 @@ export const TOWERS: Record<TowerTypeId, TowerDef> = {
               brittleTicks: 55,
             },
           },
+          {
+            cost: 145,
+            label: "Fracture Field",
+            stats: {
+              damage: 3,
+              range: 2.4,
+              cooldownTicks: 24,
+              projectileSpeed: 8,
+              slowFactor: 0.5,
+              slowTicks: 55,
+              brittleBonus: 0.75,
+              brittleTicks: 65,
+            },
+          },
         ],
       },
     ],
@@ -303,6 +361,11 @@ export const TOWERS: Record<TowerTypeId, TowerDef> = {
             label: "Longshot",
             stats: { damage: 32, range: 6.5, cooldownTicks: 60, projectileSpeed: 20 },
           },
+          {
+            cost: 200,
+            label: "Executioner",
+            stats: { damage: 55, range: 7.5, cooldownTicks: 60, projectileSpeed: 22 },
+          },
         ],
       },
       {
@@ -317,6 +380,11 @@ export const TOWERS: Record<TowerTypeId, TowerDef> = {
             cost: 110,
             label: "Semi-auto",
             stats: { damage: 10, range: 4.7, cooldownTicks: 24, projectileSpeed: 18 },
+          },
+          {
+            cost: 170,
+            label: "Full-Auto",
+            stats: { damage: 10, range: 4.9, cooldownTicks: 14, projectileSpeed: 18 },
           },
         ],
       },
@@ -370,6 +438,19 @@ export const TOWERS: Record<TowerTypeId, TowerDef> = {
               dotTicks: 90,
             },
           },
+          {
+            cost: 150,
+            label: "Necrotic Brew",
+            stats: {
+              damage: 3,
+              range: 2.5,
+              cooldownTicks: 30,
+              projectileSpeed: 7,
+              damageType: "poison",
+              dotDamagePerTick: 1.4,
+              dotTicks: 110,
+            },
+          },
         ],
       },
       {
@@ -401,6 +482,20 @@ export const TOWERS: Record<TowerTypeId, TowerDef> = {
               splashRadius: 1.4,
               dotDamagePerTick: 0.4,
               dotTicks: 60,
+            },
+          },
+          {
+            cost: 160,
+            label: "Toxic Deluge",
+            stats: {
+              damage: 4,
+              range: 2.5,
+              cooldownTicks: 32,
+              projectileSpeed: 6.5,
+              damageType: "poison",
+              splashRadius: 1.8,
+              dotDamagePerTick: 0.6,
+              dotTicks: 70,
             },
           },
         ],
@@ -459,6 +554,20 @@ export const TOWERS: Record<TowerTypeId, TowerDef> = {
               chainFalloff: 0.7,
             },
           },
+          {
+            cost: 180,
+            label: "Grand Circuit",
+            stats: {
+              damage: 7,
+              range: 2.3,
+              cooldownTicks: 24,
+              projectileSpeed: 16,
+              damageType: "lightning",
+              chainCount: 5,
+              chainRadius: 2.2,
+              chainFalloff: 0.75,
+            },
+          },
         ],
       },
       {
@@ -492,6 +601,21 @@ export const TOWERS: Record<TowerTypeId, TowerDef> = {
               chainRadius: 1.7,
               chainFalloff: 0.6,
               stunTicks: 24,
+            },
+          },
+          {
+            cost: 190,
+            label: "Static Cage",
+            stats: {
+              damage: 9,
+              range: 2.2,
+              cooldownTicks: 32,
+              projectileSpeed: 15,
+              damageType: "lightning",
+              chainCount: 3,
+              chainRadius: 1.8,
+              chainFalloff: 0.6,
+              stunTicks: 32,
             },
           },
         ],
@@ -541,6 +665,17 @@ export const TOWERS: Record<TowerTypeId, TowerDef> = {
               aura: { radius: 2.5, damageMul: 1.5, rateMul: 0.78, rangeMul: 1.05 },
             },
           },
+          {
+            cost: 140,
+            label: "War Chant",
+            stats: {
+              damage: 0,
+              range: 0,
+              cooldownTicks: 999999,
+              projectileSpeed: 0,
+              aura: { radius: 2.7, damageMul: 1.75, rateMul: 0.68, rangeMul: 1.05 },
+            },
+          },
         ],
       },
       {
@@ -566,6 +701,17 @@ export const TOWERS: Record<TowerTypeId, TowerDef> = {
               cooldownTicks: 999999,
               projectileSpeed: 0,
               aura: { radius: 3.2, damageMul: 1.1, rateMul: 0.9, rangeMul: 1.45 },
+            },
+          },
+          {
+            cost: 150,
+            label: "Grand Overlook",
+            stats: {
+              damage: 0,
+              range: 0,
+              cooldownTicks: 999999,
+              projectileSpeed: 0,
+              aura: { radius: 3.6, damageMul: 1.15, rateMul: 0.85, rangeMul: 1.65 },
             },
           },
         ],

@@ -191,6 +191,42 @@ body {
   transition: width 0.2s ease;
 }
 
+#hero-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 14px 8px;
+  animation: boss-bar-in 0.25s ease;
+}
+
+#hero-bar[hidden] {
+  display: none;
+}
+
+#hero-level {
+  font-size: 12px;
+  font-weight: 700;
+  color: #e9d5ff;
+}
+
+#btn-hero-ability {
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid #6b21a8;
+  border-radius: 10px;
+  background: #3b1554;
+  color: #e9d5ff;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: none;
+}
+
+#btn-hero-ability:disabled {
+  opacity: 0.4;
+}
+
 #board {
   flex: 1;
   position: relative;

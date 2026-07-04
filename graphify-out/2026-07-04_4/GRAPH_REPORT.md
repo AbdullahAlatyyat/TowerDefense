@@ -1,16 +1,16 @@
 # Graph Report - TowerDefense  (2026-07-04)
 
 ## Corpus Check
-- 61 files · ~29,492 words
+- 57 files · ~25,341 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 464 nodes · 1062 edges · 16 communities (15 shown, 1 thin omitted)
+- 431 nodes · 952 edges · 15 communities (14 shown, 1 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 7 edges (avg confidence: 0.91)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `773afed5`
+- Built from commit: `4cebd163`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -29,16 +29,15 @@
 - [[_COMMUNITY_Community 11|Community 11]]
 - [[_COMMUNITY_Community 12|Community 12]]
 - [[_COMMUNITY_Community 13|Community 13]]
-- [[_COMMUNITY_Community 15|Community 15]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `main()` - 51 edges
-2. `Renderer` - 36 edges
-3. `apiFetch()` - 18 edges
-4. `GameState` - 17 edges
-5. `writeSave()` - 14 edges
-6. `cellKey()` - 14 edges
-7. `compilerOptions` - 12 edges
+1. `main()` - 48 edges
+2. `Renderer` - 34 edges
+3. `apiFetch()` - 17 edges
+4. `GameState` - 16 edges
+5. `compilerOptions` - 12 edges
+6. `writeSave()` - 12 edges
+7. `cellKey()` - 11 edges
 8. `createRng()` - 11 edges
 9. `run()` - 11 edges
 10. `Tower` - 10 edges
@@ -52,7 +51,7 @@
   src/ui/hud.ts → index.html
 - `towerdefense package manifest` --conceptually_related_to--> `Renderer`  [INFERRED]
   package.json → src/render/renderer.ts
-- `run()` --calls--> `createGame()`  [EXTRACTED]
+- `run()` --calls--> `step()`  [EXTRACTED]
   scripts/simulate.ts → src/game/state.ts
 
 ## Hyperedges (group relationships)
@@ -60,19 +59,19 @@
 - **Deterministic seeded simulation (fixed timestep + seeded RNG, verified headlessly)** — core_loop_startloop, core_rng_createrng, game_state_step, scripts_simulate_run [INFERRED 0.85]
 - **Drag-to-place tower flow (input validates via game rules, renderer draws ghost)** — ui_input_createplacementinput, game_state_canplacetower, game_state_placetower, render_renderer_renderer, render_renderer_placementpreview [INFERRED 0.85]
 
-## Communities (16 total, 1 thin omitted)
+## Communities (15 total, 1 thin omitted)
 
 ### Community 0 - "App Bootstrap & Wave Flow"
 Cohesion: 0.06
-Nodes (49): Cell, Fixed-timestep accumulator loop, createRng(), Rng, Seeded deterministic randomness, LEVEL_01, LevelDef, WaveDef (+41 more)
+Nodes (62): buildTrack(), Cell, cellCenter(), cellKey(), expandPathCells(), PathTrack, Point, unionPathCells() (+54 more)
 
 ### Community 1 - "Placement Input & Rendering"
-Cohesion: 0.13
-Nodes (6): towerdefense package manifest, easeOutBack(), PlacementPreview, Renderer, createPlacementInput(), One-thumb drag placement UX
+Cohesion: 0.16
+Nodes (3): towerdefense package manifest, easeOutBack(), Renderer
 
 ### Community 2 - "Core Simulation & Grid"
-Cohesion: 0.08
-Nodes (61): buildTrack(), cellCenter(), cellKey(), expandPathCells(), PathTrack, Point, pointAtDistance(), unionPathCells() (+53 more)
+Cohesion: 0.07
+Nodes (54): pointAtDistance(), Fixed-timestep accumulator loop, LoopControls, LoopStats, startLoop(), TICK_DT tick duration constant, Seeded deterministic randomness, DIFFICULTIES (+46 more)
 
 ### Community 3 - "Package Manifest"
 Cohesion: 0.08
@@ -83,16 +82,16 @@ Cohesion: 0.14
 Nodes (13): compilerOptions, isolatedModules, lib, module, moduleResolution, noEmit, noUncheckedIndexedAccess, skipLibCheck (+5 more)
 
 ### Community 5 - "Tower Combat System"
-Cohesion: 0.05
-Nodes (80): startLoop(), awardCurrency(), DailyRecord, DEFAULTS, loadSave(), migrateSave(), mutatorClearKey(), recordElementalKills() (+72 more)
+Cohesion: 0.06
+Nodes (70): awardCurrency(), DailyRecord, DEFAULTS, loadSave(), migrateSave(), mutatorClearKey(), recordEndlessBest(), recordHardClear() (+62 more)
 
 ### Community 6 - "Community 6"
-Cohesion: 0.08
-Nodes (40): ENEMIES, EnemyDef, EnemyTypeId, HERO, HeroAbilityDef, HeroDef, HeroLevel, heroLevelIndex() (+32 more)
+Cohesion: 0.10
+Nodes (30): TOWER_ORDER, TowerDef, TOWERS, TowerStats, TowerTypeId, UpgradePath, UpgradeTier, COLORS (+22 more)
 
 ### Community 7 - "Community 7"
-Cohesion: 0.07
-Nodes (34): AuthedRequest, requireAuth(), authRouter, credentialsSchema, displayName, parsed, updateMeSchema, dateQuerySchema (+26 more)
+Cohesion: 0.08
+Nodes (32): AuthedRequest, requireAuth(), authRouter, credentialsSchema, displayName, parsed, updateMeSchema, dateQuerySchema (+24 more)
 
 ### Community 8 - "Community 8"
 Cohesion: 0.09
@@ -107,36 +106,32 @@ Cohesion: 0.17
 Nodes (12): ensureAudioContext(), CALM_CHORD, clamp01(), createMusic(), Music, clamp01(), createSfx(), DEFS (+4 more)
 
 ### Community 11 - "Community 11"
-Cohesion: 0.22
-Nodes (11): DIFFICULTIES, DIFFICULTY_ORDER, DifficultyDef, DifficultyId, MUTATOR_ORDER, MutatorDef, MutatorId, MUTATORS (+3 more)
+Cohesion: 0.36
+Nodes (7): DailyEntry, EndlessEntry, getDailyLeaderboard(), getEndlessLeaderboard(), createLeaderboardScreen(), el(), LeaderboardScreen
 
 ### Community 12 - "Community 12"
 Cohesion: 0.22
 Nodes (8): Accounts & sync (`server/`), Architecture (load-bearing rules), Commands, Git workflow — auto-commit & push, graphify, Mobile-first constraints, TowerDefense, Verification
 
-### Community 15 - "Community 15"
-Cohesion: 0.40
-Nodes (5): createOnboarding(), el(), Onboarding, Slide, SLIDES
-
 ## Knowledge Gaps
-- **172 isolated node(s):** `target`, `module`, `moduleResolution`, `lib`, `strict` (+167 more)
+- **164 isolated node(s):** `target`, `module`, `moduleResolution`, `lib`, `strict` (+159 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **1 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Renderer` connect `Placement Input & Rendering` to `Core Simulation & Grid`, `Tower Combat System`, `Community 6`?**
-  _High betweenness centrality (0.077) - this node is a cross-community bridge._
-- **Why does `main()` connect `Tower Combat System` to `App Bootstrap & Wave Flow`, `Placement Input & Rendering`, `Core Simulation & Grid`, `Community 10`, `Community 11`, `Community 15`?**
-  _High betweenness centrality (0.025) - this node is a cross-community bridge._
+- **Why does `Renderer` connect `Placement Input & Rendering` to `App Bootstrap & Wave Flow`, `Core Simulation & Grid`, `Tower Combat System`, `Community 6`?**
+  _High betweenness centrality (0.076) - this node is a cross-community bridge._
+- **Why does `main()` connect `Tower Combat System` to `App Bootstrap & Wave Flow`, `Placement Input & Rendering`, `Core Simulation & Grid`, `Community 6`, `Community 10`, `Community 11`?**
+  _High betweenness centrality (0.027) - this node is a cross-community bridge._
 - **Why does `GameState` connect `Core Simulation & Grid` to `App Bootstrap & Wave Flow`, `Placement Input & Rendering`, `Tower Combat System`, `Community 6`?**
-  _High betweenness centrality (0.020) - this node is a cross-community bridge._
+  _High betweenness centrality (0.019) - this node is a cross-community bridge._
 - **What connects `target`, `module`, `moduleResolution` to the rest of the system?**
-  _174 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _166 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `App Bootstrap & Wave Flow` be split into smaller, more focused modules?**
-  _Cohesion score 0.06390977443609022 - nodes in this community are weakly interconnected._
-- **Should `Placement Input & Rendering` be split into smaller, more focused modules?**
-  _Cohesion score 0.12701612903225806 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.05829420970266041 - nodes in this community are weakly interconnected._
 - **Should `Core Simulation & Grid` be split into smaller, more focused modules?**
-  _Cohesion score 0.0763000852514919 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.06810035842293907 - nodes in this community are weakly interconnected._
+- **Should `Package Manifest` be split into smaller, more focused modules?**
+  _Cohesion score 0.08333333333333333 - nodes in this community are weakly interconnected._

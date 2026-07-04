@@ -8,6 +8,7 @@ import {
   recordElementalKills,
   recordEndlessBest,
   recordHardClear,
+  recordHeroXp,
   recordMutatorClear,
   recordStars,
   starsForRun,
@@ -38,6 +39,7 @@ import {
   pushCurrency,
   pushDaily,
   pushEndless,
+  pushHeroXp,
   pushMetaUpgrade,
   pushStars,
 } from "./net/sync";
@@ -90,7 +92,7 @@ async function main(): Promise<void> {
     mutators: MutatorId[] = [],
   ): void {
     mode = m;
-    state = createGame(level, seed, diff, metaUpgradeBonus(save.metaUpgrades), mutators);
+    state = createGame(level, seed, diff, metaUpgradeBonus(save.metaUpgrades), mutators, save.heroXp);
     ui.selectedTowerId = null;
     renderer.setLevel(level);
     screens.hideAll();
@@ -241,6 +243,7 @@ async function main(): Promise<void> {
       save.metaUpgrades = merged.metaUpgrades;
       save.achievements = { ...save.achievements, ...merged.achievements };
       save.bestEndlessWave = merged.bestEndlessWave;
+      save.heroXp = merged.heroXp;
       writeSave(save);
       screens.showMenu();
     } catch {
@@ -316,6 +319,8 @@ async function main(): Promise<void> {
         const gems = 8 + stars * 4;
         awardCurrency(save, gems);
         recordElementalKills(save, st.elementalKills);
+        recordHeroXp(save, st.heroXp);
+        if (account) pushHeroXp(save.heroXp);
         const unlocked = refreshAchievements(save);
         writeSave(save);
         syncProgress(unlocked);
@@ -331,6 +336,8 @@ async function main(): Promise<void> {
           primaryLabel: hasNext ? "▶ Next level" : "Level select",
         };
       }
+      recordHeroXp(save, st.heroXp);
+      if (account) pushHeroXp(save.heroXp);
       primaryAction = () => startCampaign(index);
       return {
         title: "💀 Defeat",
@@ -346,6 +353,8 @@ async function main(): Promise<void> {
       const gems = Math.floor(wavesReached / 2);
       awardCurrency(save, gems);
       recordElementalKills(save, st.elementalKills);
+      recordHeroXp(save, st.heroXp);
+      if (account) pushHeroXp(save.heroXp);
       const unlocked = refreshAchievements(save);
       writeSave(save);
       syncProgress(unlocked);
@@ -370,6 +379,8 @@ async function main(): Promise<void> {
         awardCurrency(save, gems);
       }
       recordElementalKills(save, st.elementalKills);
+      recordHeroXp(save, st.heroXp);
+      if (account) pushHeroXp(save.heroXp);
       unlocked = refreshAchievements(save);
       writeSave(save);
       if (account) pushDaily(save.daily);

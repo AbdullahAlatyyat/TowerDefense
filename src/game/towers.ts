@@ -1,5 +1,7 @@
 import { TICK_DT } from "../core/loop";
 import { ENEMIES } from "../data/enemies";
+import { HERO_XP_PER_KILL } from "../data/hero";
+import { SYNERGIES } from "../data/synergies";
 import {
   effectiveTowerStats,
   type Enemy,
@@ -53,7 +55,7 @@ function fireTowers(state: GameState): void {
 }
 
 /** Target the in-range enemy scored highest by the tower's targeting mode. */
-function acquireTarget(
+export function acquireTarget(
   state: GameState,
   x: number,
   y: number,
@@ -162,7 +164,7 @@ function nearestUnhit(
   return best;
 }
 
-function applyDamage(state: GameState, proj: Projectile, enemy: Enemy): void {
+export function applyDamage(state: GameState, proj: Projectile, enemy: Enemy): void {
   if (!state.enemies.includes(enemy)) return; // already killed by this splash/chain
 
   const def = ENEMIES[enemy.type];
@@ -173,9 +175,23 @@ function applyDamage(state: GameState, proj: Projectile, enemy: Enemy): void {
       : proj.damage;
   const resist = def.resist?.[proj.damageType] ?? 1;
   dmg *= resist;
+  // Shatter: physical damage vs. a Frost Brittle mark, regardless of attacker.
   const brittle =
     state.tick < enemy.brittleUntilTick ? enemy.brittleBonus : 0;
   dmg *= 1 + brittle;
+
+  // Named combos: bonus damage when the right damage type lands on the right
+  // debuff, regardless of which tower (or the hero) applied either one.
+  for (const rule of SYNERGIES) {
+    if (proj.damageType !== rule.damageType) continue;
+    const active =
+      rule.requiresDebuff === "slow"
+        ? state.tick < enemy.slowUntilTick
+        : rule.requiresDebuff === "poison"
+          ? state.tick < enemy.poisonUntilTick
+          : state.tick < enemy.stunUntilTick;
+    if (active) dmg *= 1 + rule.multiplier;
+  }
 
   enemy.lastHitTick = state.tick;
   if (enemy.shieldHp > 0) {
@@ -214,6 +230,7 @@ function applyDamage(state: GameState, proj: Projectile, enemy: Enemy): void {
 export function killEnemy(state: GameState, enemy: Enemy, elemental: boolean): void {
   state.gold += enemy.bounty;
   if (elemental) state.elementalKills++;
+  if (state.hero) state.heroXp += HERO_XP_PER_KILL;
   state.enemies = state.enemies.filter((e) => e.id !== enemy.id);
   const def = ENEMIES[enemy.type];
   if (def.splitInto) spawnSplit(state, enemy, def.splitInto);

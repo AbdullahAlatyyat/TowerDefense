@@ -1,6 +1,8 @@
 import type { LoopStats } from "../core/loop";
 import { ENEMIES } from "../data/enemies";
-import { TOWER_ORDER, TOWERS } from "../data/towers";
+import { HERO, heroLevelLabel, heroNextLevelXp } from "../data/hero";
+import { TOWER_ORDER, TOWERS, type TowerTypeId } from "../data/towers";
+import { activateHeroAbility } from "../game/hero";
 import {
   effectiveTowerStats,
   sellTower,
@@ -66,6 +68,12 @@ function buildDock(dock: HTMLElement): void {
     btn.innerHTML = `${def.icon}<span class="cost">🪙${def.cost}</span>`;
     dock.appendChild(btn);
   }
+  const heroBtn = document.createElement("button");
+  heroBtn.className = "build-btn";
+  heroBtn.dataset.tower = "hero";
+  heroBtn.title = `${HERO.name} — ${HERO.blurb}`;
+  heroBtn.innerHTML = `${HERO.icon}<span class="cost">🪙${HERO.cost}</span>`;
+  dock.appendChild(heroBtn);
 }
 
 export function createHud(
@@ -84,6 +92,9 @@ export function createHud(
   const bossBar = el("boss-bar");
   const bossBarName = el("boss-bar-name");
   const bossBarFill = el("boss-bar-fill");
+  const heroBar = el("hero-bar");
+  const heroLevelEl = el("hero-level");
+  const btnHeroAbility = el<HTMLButtonElement>("btn-hero-ability");
   const banner = el("banner");
   const bannerTitle = el("banner-title");
   const bannerSub = el("banner-sub");
@@ -155,6 +166,10 @@ export function createHud(
     });
   });
 
+  btnHeroAbility.addEventListener("click", () => {
+    activateHeroAbility(getState());
+  });
+
   const btnMute = el<HTMLButtonElement>("btn-mute");
   btnMute.textContent = cb.initialMuted ? "🔇" : "🔊";
   btnMute.addEventListener("click", () => {
@@ -212,8 +227,25 @@ export function createHud(
         ? `Wave ${state.waveIndex + 1}…`
         : "▶ Start wave";
       for (const btn of buildBtns) {
-        const def = TOWERS[btn.dataset.tower as keyof typeof TOWERS];
-        btn.disabled = state.status !== "playing" || state.gold < def.cost;
+        const type = btn.dataset.tower!;
+        if (type === "hero") {
+          btn.disabled =
+            state.status !== "playing" || state.hero !== null || state.gold < HERO.cost;
+        } else {
+          const def = TOWERS[type as TowerTypeId];
+          btn.disabled = state.status !== "playing" || state.gold < def.cost;
+        }
+      }
+
+      heroBar.hidden = !state.hero;
+      if (state.hero) {
+        const nextXp = heroNextLevelXp(state.heroXp);
+        const progress = nextXp === null ? "MAX" : `${state.heroXp}/${nextXp} xp`;
+        heroLevelEl.textContent = `${HERO.icon} ${heroLevelLabel(state.heroXp)} · ${progress}`;
+        const cooldown = state.hero.abilityCooldown;
+        btnHeroAbility.disabled = state.status !== "playing" || cooldown > 0;
+        btnHeroAbility.textContent =
+          cooldown > 0 ? `💥 ${Math.ceil(cooldown / 30)}s` : "💥 Nova";
       }
 
       updatePanel(state);
@@ -284,15 +316,15 @@ export function createHud(
       nameEl.textContent = path.name;
       btn.classList.remove("maxed");
       if (cost === null) {
-        const maxedHere = tower.path === i && tower.tier >= 2;
+        const maxedHere = tower.path === i && tower.tier >= 3;
         labelEl.textContent = maxedHere
-          ? path.tiers[1].label
+          ? path.tiers[2].label
           : "Locked (other path chosen)";
         costEl.textContent = maxedHere ? "MAX" : "🔒";
         if (maxedHere) btn.classList.add("maxed");
         btn.disabled = true;
       } else {
-        labelEl.textContent = path.tiers[tower.tier as 0 | 1].label;
+        labelEl.textContent = path.tiers[tower.tier as 0 | 1 | 2].label;
         costEl.textContent = `🪙 ${cost}`;
         btn.disabled = state.gold < cost;
       }

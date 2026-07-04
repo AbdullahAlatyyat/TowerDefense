@@ -1,6 +1,7 @@
 import { Container, Graphics, Renderer as PixiRenderer, Texture } from "pixi.js";
 import type { EnemyTypeId } from "../data/enemies";
 import { ENEMIES } from "../data/enemies";
+import { HERO } from "../data/hero";
 import { TOWERS, type TowerTypeId } from "../data/towers";
 
 /**
@@ -16,6 +17,8 @@ export interface TextureAtlas {
   towerBase: Texture;
   turrets: Record<TowerTypeId, Texture>;
   projectiles: Record<TowerTypeId, Texture>;
+  heroTurret: Texture;
+  heroProjectile: Texture;
   shadow: Texture;
   glow: Texture;
   spark: Texture;
@@ -347,6 +350,40 @@ function projectileTexture(renderer: PixiRenderer, type: TowerTypeId): Texture {
   return toTexture(renderer, g);
 }
 
+/** The hero: a five-point star crest on a round plate, facing +x. */
+function heroTurretTexture(renderer: PixiRenderer): Texture {
+  const g = new Graphics();
+  const c = HERO.color;
+  const dark = shade(c, 0.55);
+  const light = shade(c, 1.4);
+  const u = T;
+  g.circle(0, 0, u * 0.24).fill(c).stroke({ width: u * 0.04, color: dark });
+  const spikes = 5;
+  const outer = u * 0.17;
+  const inner = u * 0.075;
+  g.moveTo(outer, 0);
+  for (let i = 1; i <= spikes * 2; i++) {
+    const a = (i * Math.PI) / spikes;
+    const r = i % 2 === 0 ? outer : inner;
+    g.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+  }
+  g.closePath().fill({ color: 0xfff7e6 }).stroke({ width: u * 0.02, color: dark });
+  g.circle(-u * 0.06, -u * 0.06, u * 0.08).fill({ color: light, alpha: 0.5 });
+  return toTexture(renderer, g);
+}
+
+function heroProjectileTexture(renderer: PixiRenderer): Texture {
+  const g = new Graphics();
+  const u = T;
+  g.moveTo(-u * 0.15, -u * 0.06)
+    .lineTo(u * 0.15, 0)
+    .lineTo(-u * 0.15, u * 0.06)
+    .closePath()
+    .fill(HERO.projectileColor)
+    .stroke({ width: u * 0.02, color: shade(HERO.color, 0.55) });
+  return toTexture(renderer, g);
+}
+
 function softCircle(renderer: PixiRenderer, radius: number, color: number, steps = 6): Texture {
   const g = new Graphics();
   for (let i = steps; i >= 1; i--) {
@@ -384,6 +421,8 @@ export function buildAtlas(renderer: PixiRenderer): TextureAtlas {
     towerBase: towerBaseTexture(renderer),
     turrets,
     projectiles,
+    heroTurret: heroTurretTexture(renderer),
+    heroProjectile: heroProjectileTexture(renderer),
     shadow: softCircle(renderer, T * 0.34, 0x000000, 5),
     glow: softCircle(renderer, T * 0.5, 0xffffff, 7),
     spark,

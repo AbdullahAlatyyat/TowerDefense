@@ -17,6 +17,7 @@ import {
   type TowerTypeId,
 } from "../data/towers";
 import { updateEnemies, updateSpawner } from "./enemies";
+import { updateHero } from "./hero";
 import { updateTowers } from "./towers";
 import { checkWaveEnd } from "./waves";
 
@@ -66,8 +67,8 @@ export interface Tower {
   cooldown: number;
   /** chosen upgrade path; null until the first upgrade commits one */
   path: 0 | 1 | null;
-  /** 0 = base, 1..2 = tier within the chosen path */
-  tier: 0 | 1 | 2;
+  /** 0 = base, 1..3 = tier within the chosen path */
+  tier: 0 | 1 | 2 | 3;
   /** total gold spent (place + upgrades); sell refunds SELL_REFUND of it */
   invested: number;
   /** which in-range enemy to fire at */
@@ -77,15 +78,30 @@ export interface Tower {
   aimY: number;
 }
 
+export interface Hero {
+  id: number;
+  cx: number;
+  cy: number;
+  x: number;
+  y: number;
+  cooldown: number;
+  targetMode: TargetMode;
+  aimX: number;
+  aimY: number;
+  /** ticks remaining until the nova ability can be triggered again */
+  abilityCooldown: number;
+}
+
 export interface Projectile {
   id: number;
   x: number;
   y: number;
   targetId: number;
-  /** stats snapshotted from the tower at fire time */
+  /** stats snapshotted from the tower (or hero) at fire time */
   damage: number;
   speed: number;
-  towerType: TowerTypeId;
+  /** which tower type fired this, or "hero" for the hero unit's own shots */
+  towerType: TowerTypeId | "hero";
   splashRadius: number;
   slowFactor: number;
   slowTicks: number;
@@ -132,6 +148,11 @@ export interface GameState {
   nextId: number;
   /** lifetime-this-run count of enemies killed by a non-physical damage type */
   elementalKills: number;
+
+  /** null until deployed; at most one per run, but persists levels across runs via heroXp */
+  hero: Hero | null;
+  /** persistent lifetime XP (kills), seeded from the save and grown as enemies die this run */
+  heroXp: number;
 }
 
 /** Flat bonuses from owned meta-upgrades, applied on top of the difficulty scalar. */
@@ -148,6 +169,7 @@ export function createGame(
   difficulty: DifficultyId = "normal",
   metaBonus: MetaBonus = NO_META_BONUS,
   mutators: MutatorId[] = [],
+  heroXp = 0,
 ): GameState {
   const mutatorGoldMul = mutators.reduce((m, id) => m * (MUTATORS[id].goldMul ?? 1), 1);
   return {
@@ -175,6 +197,8 @@ export function createGame(
     projectiles: [],
     nextId: 1,
     elementalKills: 0,
+    hero: null,
+    heroXp,
   };
 }
 
@@ -185,6 +209,7 @@ export function step(state: GameState): void {
   updateSpawner(state);
   updateEnemies(state);
   updateTowers(state);
+  updateHero(state);
   checkWaveEnd(state);
 }
 
@@ -192,7 +217,7 @@ export function step(state: GameState): void {
 export function towerStats(tower: Tower): TowerStats {
   const def = TOWERS[tower.type];
   if (tower.tier === 0 || tower.path === null) return def.base;
-  return def.paths[tower.path].tiers[(tower.tier - 1) as 0 | 1].stats;
+  return def.paths[tower.path].tiers[(tower.tier - 1) as 0 | 1 | 2].stats;
 }
 
 /**
@@ -271,9 +296,9 @@ export function placeTower(
 
 /** Cost of the next tier on a path, or null if that upgrade is unavailable. */
 export function upgradeCost(tower: Tower, pathIdx: 0 | 1): number | null {
-  if (tower.tier >= 2) return null;
+  if (tower.tier >= 3) return null;
   if (tower.path !== null && tower.path !== pathIdx) return null;
-  return TOWERS[tower.type].paths[pathIdx].tiers[tower.tier as 0 | 1].cost;
+  return TOWERS[tower.type].paths[pathIdx].tiers[tower.tier as 0 | 1 | 2].cost;
 }
 
 export function upgradeTower(
@@ -289,7 +314,7 @@ export function upgradeTower(
   state.gold -= cost;
   tower.invested += cost;
   tower.path = pathIdx;
-  tower.tier = (tower.tier + 1) as 1 | 2;
+  tower.tier = (tower.tier + 1) as 1 | 2 | 3;
   return true;
 }
 

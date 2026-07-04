@@ -9,6 +9,7 @@ import {
 import { cellCenter, cellKey } from "../core/grid";
 import { createRng } from "../core/rng";
 import { ENEMIES } from "../data/enemies";
+import { HERO, heroLevelIndex, heroStatsForXp } from "../data/hero";
 import { TOWERS, type TowerTypeId } from "../data/towers";
 import { hashString } from "../game/daily";
 import { effectiveTowerStats, type GameState } from "../game/state";
@@ -82,10 +83,19 @@ interface TowerView {
   type: TowerTypeId;
 }
 
+interface HeroView {
+  c: Container;
+  turret: Sprite;
+  pips: Graphics;
+  levelKey: number;
+  lastCooldown: number;
+  firedAt: number;
+}
+
 interface ProjView {
   s: Sprite;
   last: { x: number; y: number };
-  type: TowerTypeId;
+  type: TowerTypeId | "hero";
   splash: number;
 }
 
@@ -119,6 +129,7 @@ export class Renderer {
   private ghostLayer = new Graphics();
 
   private towerViews = new Map<number, TowerView>();
+  private heroView: HeroView | null = null;
   private enemyViews = new Map<number, EnemyView>();
   private projViews = new Map<number, ProjView>();
   private particles: Particle[] = [];
@@ -290,6 +301,7 @@ export class Renderer {
       bossSpawns: 0,
     };
     this.syncTowers(state, now);
+    this.syncHero(state, now);
     this.syncEnemies(state, now, events);
     this.syncProjectiles(state, events);
     this.updateParticles(dt);
@@ -337,8 +349,9 @@ export class Renderer {
         if (tower.tier > 0 && tower.path !== null) {
           const pipColor = tower.path === 0 ? COLORS.pathA : COLORS.pathB;
           for (let i = 0; i < tower.tier; i++) {
+            const offset = (i - (tower.tier - 1) / 2) * 0.18;
             view.pips
-              .circle((-0.09 + i * 0.18) * S, 0.3 * S, 0.05 * S)
+              .circle(offset * S, 0.3 * S, 0.05 * S)
               .fill(pipColor)
               .stroke({ width: 0.018 * S, color: 0x1a2330 });
           }
@@ -369,6 +382,63 @@ export class Renderer {
         this.towerViews.delete(id);
       }
     }
+  }
+
+  // ---------- hero ----------
+
+  private makeHeroView(): HeroView {
+    const c = new Container();
+    const shadow = new Sprite(this.atlas.shadow);
+    shadow.anchor.set(0.5);
+    shadow.scale.set(1.3 / T);
+    shadow.position.set(0.04, 0.07);
+    const base = new Sprite(this.atlas.towerBase);
+    base.anchor.set(0.5);
+    base.scale.set(1 / T);
+    const pips = new Graphics();
+    pips.scale.set(1 / S);
+    const turret = new Sprite(this.atlas.heroTurret);
+    turret.anchor.set(0.5);
+    turret.scale.set(1 / T);
+    c.addChild(shadow, base, pips, turret);
+    return { c, turret, pips, levelKey: -1, lastCooldown: 0, firedAt: -10 };
+  }
+
+  private syncHero(state: GameState, now: number): void {
+    const hero = state.hero;
+    if (!hero) {
+      if (this.heroView) {
+        this.heroView.c.destroy({ children: true });
+        this.heroView = null;
+      }
+      return;
+    }
+    let view = this.heroView;
+    if (!view) {
+      view = this.makeHeroView();
+      view.c.position.set(hero.x, hero.y);
+      this.heroView = view;
+      this.towerLayer.addChild(view.c);
+    }
+    const level = heroLevelIndex(state.heroXp);
+    if (view.levelKey !== level) {
+      view.levelKey = level;
+      view.pips.clear();
+      for (let i = 0; i < level; i++) {
+        const offset = (i - (level - 1) / 2) * 0.18;
+        view.pips
+          .circle(offset * S, 0.3 * S, 0.05 * S)
+          .fill(0xfbbf24)
+          .stroke({ width: 0.018 * S, color: 0x1a2330 });
+      }
+    }
+    if (hero.cooldown > view.lastCooldown) view.firedAt = now;
+    view.lastCooldown = hero.cooldown;
+    const aim = Math.atan2(hero.aimY, hero.aimX);
+    const recoil = Math.max(0, 1 - (now - view.firedAt) / 0.12);
+    view.turret.rotation = aim;
+    view.turret.scale.set((1 + level * 0.06) / T);
+    view.turret.position.set(-Math.cos(aim) * 0.07 * recoil, -Math.sin(aim) * 0.07 * recoil);
   }
 
   // ---------- enemies ----------
@@ -519,7 +589,11 @@ export class Renderer {
       seen.add(proj.id);
       let view = this.projViews.get(proj.id);
       if (!view) {
-        const s = new Sprite(this.atlas.projectiles[proj.towerType]);
+        const tex =
+          proj.towerType === "hero"
+            ? this.atlas.heroProjectile
+            : this.atlas.projectiles[proj.towerType];
+        const s = new Sprite(tex);
         s.anchor.set(0.5);
         s.scale.set(1 / T);
         view = {
@@ -539,7 +613,7 @@ export class Renderer {
     }
     for (const [id, view] of this.projViews) {
       if (seen.has(id)) continue;
-      const color = TOWERS[view.type].projectileColor;
+      const color = view.type === "hero" ? HERO.projectileColor : TOWERS[view.type].projectileColor;
       if (view.splash > 0) {
         events.splashes++;
         this.spawnRing(view.last.x, view.last.y, view.splash, color);
@@ -714,7 +788,11 @@ export class Renderer {
 
     const placement = ui.placement;
     if (!placement.active) return;
-    const def = TOWERS[placement.type];
+    const visual =
+      placement.type === "hero"
+        ? { color: HERO.color, edgeColor: HERO.edgeColor }
+        : TOWERS[placement.type];
+    const range = placement.type === "hero" ? HERO.base.range : TOWERS[placement.type].base.range;
 
     if (placement.onBoard) {
       const color = placement.valid ? COLORS.ghostValid : COLORS.ghostInvalid;
@@ -727,11 +805,7 @@ export class Renderer {
       )
         .fill({ color, alpha: 0.18 })
         .stroke({ width: 0.05 * S, color, alpha: 0.9 });
-      g.circle(
-        (placement.cx + 0.5) * S,
-        (placement.cy + 0.5) * S,
-        def.base.range * S,
-      )
+      g.circle((placement.cx + 0.5) * S, (placement.cy + 0.5) * S, range * S)
         .fill({ color, alpha: 0.07 })
         .stroke({ width: 0.03 * S, color, alpha: 0.5 });
     }
@@ -742,8 +816,8 @@ export class Renderer {
       0.72 * S,
       0.12 * S,
     )
-      .fill({ color: def.color, alpha: 0.75 })
-      .stroke({ width: 0.05 * S, color: def.edgeColor, alpha: 0.9 });
+      .fill({ color: visual.color, alpha: 0.75 })
+      .stroke({ width: 0.05 * S, color: visual.edgeColor, alpha: 0.9 });
   }
 
   setLevel(level: LevelDef): void {

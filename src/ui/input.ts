@@ -1,5 +1,6 @@
 import { canPlaceTower, placeTower, type GameState } from "../game/state";
 import type { TowerTypeId } from "../data/towers";
+import { canPlaceHero, placeHero } from "../game/hero";
 import type { Renderer } from "../render/renderer";
 
 /**
@@ -18,7 +19,7 @@ const TAP_SLOP = 0.35; // world units of movement still counted as a tap
 
 export interface PlacementPreview {
   active: boolean;
-  type: TowerTypeId;
+  type: TowerTypeId | "hero";
   /** ghost center in world (cell) units */
   worldX: number;
   worldY: number;
@@ -71,7 +72,9 @@ export function createInput(
       placement.cy < state.level.rows;
     placement.valid =
       placement.onBoard &&
-      canPlaceTower(state, placement.type, placement.cx, placement.cy);
+      (placement.type === "hero"
+        ? canPlaceHero(state, placement.cx, placement.cy)
+        : canPlaceTower(state, placement.type, placement.cx, placement.cy));
   };
 
   const end = (e: PointerEvent, commit: boolean) => {
@@ -80,9 +83,11 @@ export function createInput(
     activeButton?.classList.remove("dragging");
     activeButton = null;
     if (commit && placement.active && placement.valid) {
-      if (placeTower(getState(), placement.type, placement.cx, placement.cy)) {
-        onPlaced();
-      }
+      const placed =
+        placement.type === "hero"
+          ? placeHero(getState(), placement.cx, placement.cy)
+          : placeTower(getState(), placement.type, placement.cx, placement.cy);
+      if (placed) onPlaced();
     }
     placement.active = false;
   };
@@ -93,7 +98,7 @@ export function createInput(
     if (pointerId !== null || getState().status !== "playing") return;
     e.preventDefault();
     pointerId = e.pointerId;
-    placement.type = btn.dataset.tower as TowerTypeId;
+    placement.type = btn.dataset.tower as TowerTypeId | "hero";
     placement.active = true;
     ui.selectedTowerId = null;
     activeButton = btn;
