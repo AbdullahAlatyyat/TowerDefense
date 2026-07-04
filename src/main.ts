@@ -5,6 +5,7 @@ import { startLoop } from "./core/loop";
 import {
   awardCurrency,
   loadSave,
+  recordElementalKills,
   recordEndlessBest,
   recordHardClear,
   recordMutatorClear,
@@ -314,6 +315,7 @@ async function main(): Promise<void> {
         if (st.mutators.length > 0) recordMutatorClear(save, st.level.id, st.mutators);
         const gems = 8 + stars * 4;
         awardCurrency(save, gems);
+        recordElementalKills(save, st.elementalKills);
         const unlocked = refreshAchievements(save);
         writeSave(save);
         syncProgress(unlocked);
@@ -343,6 +345,7 @@ async function main(): Promise<void> {
       if (account) pushEndless(save.bestEndlessWave);
       const gems = Math.floor(wavesReached / 2);
       awardCurrency(save, gems);
+      recordElementalKills(save, st.elementalKills);
       const unlocked = refreshAchievements(save);
       writeSave(save);
       syncProgress(unlocked);
@@ -366,6 +369,7 @@ async function main(): Promise<void> {
         gems = 10 + stars * 5;
         awardCurrency(save, gems);
       }
+      recordElementalKills(save, st.elementalKills);
       unlocked = refreshAchievements(save);
       writeSave(save);
       if (account) pushDaily(save.daily);

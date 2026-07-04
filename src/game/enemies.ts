@@ -4,6 +4,7 @@ import { ENEMIES } from "../data/enemies";
 import { DIFFICULTIES } from "../data/difficulty";
 import { MUTATORS } from "../data/mutators";
 import type { GameState } from "./state";
+import { killEnemy } from "./towers";
 
 /** Spawns the current wave's groups sequentially. */
 export function updateSpawner(state: GameState): void {
@@ -48,6 +49,9 @@ export function updateSpawner(state: GameState): void {
     slowFactor: 1,
     brittleUntilTick: 0,
     brittleBonus: 0,
+    poisonUntilTick: 0,
+    poisonDamagePerTick: 0,
+    stunUntilTick: 0,
     shieldHp: shieldMax,
     shieldMax,
     lastHitTick: -Infinity,
@@ -72,9 +76,19 @@ export function updateEnemies(state: GameState): void {
       enemy.shieldHp = Math.min(enemy.shieldMax, enemy.shieldHp + enemy.shieldMax / 60);
     }
 
+    if (state.tick < enemy.poisonUntilTick) {
+      enemy.hp -= enemy.poisonDamagePerTick;
+      if (enemy.poisonDamagePerTick > 0) enemy.hitSeq++;
+      if (enemy.hp <= 0) {
+        killEnemy(state, enemy, true);
+        continue;
+      }
+    }
+
     const track = state.tracks[enemy.laneIndex]!;
-    const slowed = state.tick < enemy.slowUntilTick;
-    enemy.dist += enemy.speed * (slowed ? enemy.slowFactor : 1) * TICK_DT;
+    const stunned = state.tick < enemy.stunUntilTick;
+    const slowed = !stunned && state.tick < enemy.slowUntilTick;
+    enemy.dist += enemy.speed * (stunned ? 0 : slowed ? enemy.slowFactor : 1) * TICK_DT;
     if (enemy.dist >= track.length) {
       state.lives--;
       continue;

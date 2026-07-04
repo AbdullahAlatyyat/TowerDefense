@@ -1,7 +1,7 @@
 import { TICK_DT } from "../core/loop";
 import { ENEMIES } from "../data/enemies";
 import {
-  towerStats,
+  effectiveTowerStats,
   type Enemy,
   type GameState,
   type Projectile,
@@ -21,7 +21,8 @@ function fireTowers(state: GameState): void {
       tower.cooldown--;
       continue;
     }
-    const stats = towerStats(tower);
+    const stats = effectiveTowerStats(state, tower);
+    if (stats.damage <= 0) continue; // Beacon-style support towers never fire
     const target = acquireTarget(state, tower.x, tower.y, stats.range, tower.targetMode);
     if (!target) continue;
     tower.aimX = target.x - tower.x;
@@ -40,6 +41,13 @@ function fireTowers(state: GameState): void {
       slowTicks: stats.slowTicks ?? 0,
       brittleBonus: stats.brittleBonus ?? 0,
       brittleTicks: stats.brittleTicks ?? 0,
+      damageType: stats.damageType ?? "physical",
+      dotDamagePerTick: stats.dotDamagePerTick ?? 0,
+      dotTicks: stats.dotTicks ?? 0,
+      stunTicks: stats.stunTicks ?? 0,
+      chainCount: stats.chainCount ?? 0,
+      chainRadius: stats.chainRadius ?? 0,
+      chainFalloff: stats.chainFalloff ?? 0,
     });
   }
 }
@@ -100,7 +108,9 @@ function moveProjectiles(state: GameState): void {
 }
 
 function impact(state: GameState, proj: Projectile, target: Enemy): void {
-  if (proj.splashRadius > 0) {
+  if (proj.chainCount > 0) {
+    chainImpact(state, proj, target);
+  } else if (proj.splashRadius > 0) {
     const rSq = proj.splashRadius * proj.splashRadius;
     // Snapshot: damage can kill and mutate state.enemies via applyDamage.
     for (const enemy of [...state.enemies]) {
@@ -113,11 +123,56 @@ function impact(state: GameState, proj: Projectile, target: Enemy): void {
   }
 }
 
+/** Chains from the primary target to up to chainCount nearest not-yet-hit
+ * enemies within chainRadius, applying chainFalloff damage per bounce.
+ * Purely geometric (no RNG) so replay/daily-seed determinism is unaffected. */
+function chainImpact(state: GameState, proj: Projectile, first: Enemy): void {
+  applyDamage(state, proj, first);
+  const hit = new Set<number>([first.id]);
+  let from = first;
+  let dmg = proj.damage * proj.chainFalloff;
+  for (let i = 0; i < proj.chainCount; i++) {
+    const next = nearestUnhit(state, from, proj.chainRadius, hit);
+    if (!next) break;
+    applyDamage(state, { ...proj, damage: dmg }, next);
+    hit.add(next.id);
+    from = next;
+    dmg *= proj.chainFalloff;
+  }
+}
+
+function nearestUnhit(
+  state: GameState,
+  from: Enemy,
+  radius: number,
+  exclude: Set<number>,
+): Enemy | undefined {
+  let best: Enemy | undefined;
+  let bestDistSq = radius * radius;
+  for (const enemy of state.enemies) {
+    if (exclude.has(enemy.id)) continue;
+    const dx = enemy.x - from.x;
+    const dy = enemy.y - from.y;
+    const distSq = dx * dx + dy * dy;
+    if (distSq < bestDistSq) {
+      best = enemy;
+      bestDistSq = distSq;
+    }
+  }
+  return best;
+}
+
 function applyDamage(state: GameState, proj: Projectile, enemy: Enemy): void {
-  if (!state.enemies.includes(enemy)) return; // already killed by this splash
+  if (!state.enemies.includes(enemy)) return; // already killed by this splash/chain
 
   const def = ENEMIES[enemy.type];
-  let dmg = def.armor ? Math.max(0.1, proj.damage - def.armor) : proj.damage;
+  // Armor is a physical-only concept: other damage types bypass it entirely.
+  let dmg =
+    proj.damageType === "physical" && def.armor
+      ? Math.max(0.1, proj.damage - def.armor)
+      : proj.damage;
+  const resist = def.resist?.[proj.damageType] ?? 1;
+  dmg *= resist;
   const brittle =
     state.tick < enemy.brittleUntilTick ? enemy.brittleBonus : 0;
   dmg *= 1 + brittle;
@@ -132,9 +187,7 @@ function applyDamage(state: GameState, proj: Projectile, enemy: Enemy): void {
   enemy.hp -= dmg;
 
   if (enemy.hp <= 0) {
-    state.gold += enemy.bounty;
-    state.enemies = state.enemies.filter((e) => e.id !== enemy.id);
-    if (def.splitInto) spawnSplit(state, enemy, def.splitInto);
+    killEnemy(state, enemy, proj.damageType !== "physical");
     return;
   }
   // Debuffs only matter on survivors.
@@ -146,6 +199,24 @@ function applyDamage(state: GameState, proj: Projectile, enemy: Enemy): void {
     enemy.brittleUntilTick = state.tick + proj.brittleTicks;
     enemy.brittleBonus = proj.brittleBonus;
   }
+  if (proj.dotTicks > 0) {
+    enemy.poisonUntilTick = state.tick + proj.dotTicks;
+    enemy.poisonDamagePerTick = proj.dotDamagePerTick * resist;
+  }
+  if (proj.stunTicks > 0) {
+    enemy.stunUntilTick = state.tick + proj.stunTicks;
+  }
+}
+
+/** Shared death handling for both projectile impacts and DoT ticks: grants
+ * bounty, counts elemental kills for the "Shock and Awe" achievement, spawns
+ * a split-on-death's replacements, and removes the enemy from play. */
+export function killEnemy(state: GameState, enemy: Enemy, elemental: boolean): void {
+  state.gold += enemy.bounty;
+  if (elemental) state.elementalKills++;
+  state.enemies = state.enemies.filter((e) => e.id !== enemy.id);
+  const def = ENEMIES[enemy.type];
+  if (def.splitInto) spawnSplit(state, enemy, def.splitInto);
 }
 
 /** Deterministic on-death split: replacement enemies at the parent's spot. */
@@ -172,6 +243,9 @@ function spawnSplit(
       slowFactor: 1,
       brittleUntilTick: 0,
       brittleBonus: 0,
+      poisonUntilTick: 0,
+      poisonDamagePerTick: 0,
+      stunUntilTick: 0,
       shieldHp: 0,
       shieldMax: 0,
       lastHitTick: -Infinity,

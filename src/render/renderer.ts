@@ -11,7 +11,7 @@ import { createRng } from "../core/rng";
 import { ENEMIES } from "../data/enemies";
 import { TOWERS, type TowerTypeId } from "../data/towers";
 import { hashString } from "../game/daily";
-import { towerStats, type GameState } from "../game/state";
+import { effectiveTowerStats, type GameState } from "../game/state";
 import type { LevelDef } from "../data/level01";
 import type { UiState } from "../ui/input";
 import { buildAtlas, T, type TextureAtlas } from "./textures";
@@ -463,10 +463,22 @@ export class Renderer {
       const bob = 1 + Math.sin(now * 9 + enemy.id * 1.7) * 0.05;
       view.body.scale.set((pop * bob) / T, (pop * (2 - bob)) / T);
 
-      // Debuff tinting.
+      // Debuff tinting (stun/poison take priority over the older slow/brittle combos).
+      const stunned = state.tick < enemy.stunUntilTick;
+      const poisoned = state.tick < enemy.poisonUntilTick;
       const slowed = state.tick < enemy.slowUntilTick;
       const brittle = state.tick < enemy.brittleUntilTick;
-      view.body.tint = slowed && brittle ? 0xa9c0ff : slowed ? 0x9fd4ff : brittle ? 0xd7c5ff : 0xffffff;
+      view.body.tint = stunned
+        ? 0xfde68a
+        : poisoned
+          ? 0x84cc16
+          : slowed && brittle
+            ? 0xa9c0ff
+            : slowed
+              ? 0x9fd4ff
+              : brittle
+                ? 0xd7c5ff
+                : 0xffffff;
 
       // Shield ring: visible and fading with remaining shield pool.
       view.shieldRing.visible = enemy.shieldHp > 0;
@@ -688,7 +700,7 @@ export class Renderer {
     if (ui.selectedTowerId !== null) {
       const tower = state.towers.find((t) => t.id === ui.selectedTowerId);
       if (tower) {
-        const stats = towerStats(tower);
+        const stats = effectiveTowerStats(state, tower);
         g.roundRect(tower.cx * S, tower.cy * S, S, S, 0.1 * S).stroke({
           width: 0.05 * S,
           color: COLORS.select,

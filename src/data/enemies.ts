@@ -1,3 +1,5 @@
+import type { DamageType } from "./towers";
+
 export type EnemyTypeId =
   | "runner"
   | "grunt"
@@ -37,6 +39,8 @@ export interface EnemyDef {
   splitInto?: { type: EnemyTypeId; count: number; hpFrac: number };
   /** render/HUD hint only — no separate sim path */
   isBoss?: boolean;
+  /** multiplier per damage type; 1 = neutral, <1 = resistant, >1 = weak. Omitted key = neutral. */
+  resist?: Partial<Record<DamageType, number>>;
 }
 
 export const ENEMIES: Record<EnemyTypeId, EnemyDef> = {
@@ -90,6 +94,7 @@ export const ENEMIES: Record<EnemyTypeId, EnemyDef> = {
     color: 0x94a3b8,
     edgeColor: 0x475569,
     armor: 1,
+    resist: { physical: 0.75, lightning: 0.85, poison: 1.4 },
   },
   wisp: {
     id: "wisp",
@@ -112,6 +117,7 @@ export const ENEMIES: Record<EnemyTypeId, EnemyDef> = {
     color: 0x2dd4bf,
     edgeColor: 0x0f766e,
     regenPerTick: 0.08,
+    resist: { poison: 1.35 },
   },
   warden: {
     id: "warden",
@@ -148,5 +154,6 @@ export const ENEMIES: Record<EnemyTypeId, EnemyDef> = {
     armor: 1,
     regenPerTick: 0.06,
     isBoss: true,
+    resist: { physical: 0.9, poison: 0.9, lightning: 0.9 },
   },
 };

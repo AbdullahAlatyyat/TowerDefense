@@ -11,7 +11,7 @@ export interface DailyRecord {
 }
 
 export interface SaveData {
-  version: 4;
+  version: 5;
   /** levelId → best stars earned (0–3) */
   stars: Record<string, number>;
   muted: boolean;
@@ -36,6 +36,8 @@ export interface SaveData {
   hardClears: Record<string, boolean>;
   /** `${levelId}:${sorted mutator ids joined by ','}` → ever won with that exact mutator set active */
   mutatorClears: Record<string, boolean>;
+  /** lifetime count of enemies killed by a non-physical damage type (poison/lightning) */
+  elementalKills: number;
 }
 
 const KEY = "towerdefense-save";
@@ -43,7 +45,7 @@ const KEY = "towerdefense-save";
 const LEGACY_ENDLESS_KEY = "towerdefense-endless-best";
 
 const DEFAULTS: SaveData = {
-  version: 4,
+  version: 5,
   stars: {},
   muted: false,
   sfxVolume: 1,
@@ -57,6 +59,7 @@ const DEFAULTS: SaveData = {
   bestEndlessWave: 0,
   hardClears: {},
   mutatorClears: {},
+  elementalKills: 0,
 };
 
 /**
@@ -67,16 +70,20 @@ const DEFAULTS: SaveData = {
 function migrateSave(raw: unknown): SaveData {
   if (!raw || typeof raw !== "object") return structuredClone(DEFAULTS);
   const data = raw as Partial<SaveData> & { version?: unknown };
+  if (data.version === 5) {
+    return { ...structuredClone(DEFAULTS), ...data, version: 5 };
+  }
   if (data.version === 4) {
-    return { ...structuredClone(DEFAULTS), ...data, version: 4 };
+    // v4 lacked elementalKills — default it in.
+    return { ...structuredClone(DEFAULTS), ...data, version: 5 };
   }
   if (data.version === 3) {
     // v3 lacked mutatorClears — default it in.
-    return { ...structuredClone(DEFAULTS), ...data, version: 4 };
+    return { ...structuredClone(DEFAULTS), ...data, version: 5 };
   }
   if (data.version === 2) {
     // v2 lacked sfxVolume/musicVolume/haptics/tutorialSeen — default those in.
-    return { ...structuredClone(DEFAULTS), ...data, version: 4 };
+    return { ...structuredClone(DEFAULTS), ...data, version: 5 };
   }
   if (data.version === 1) {
     // v1 only had stars/muted/daily — carry those forward, default the rest.
@@ -85,7 +92,7 @@ function migrateSave(raw: unknown): SaveData {
       stars: data.stars ?? {},
       muted: data.muted ?? false,
       daily: data.daily ?? null,
-      version: 4,
+      version: 5,
     };
   }
   return structuredClone(DEFAULTS);
@@ -179,4 +186,10 @@ export function recordMutatorClear(save: SaveData, levelId: string, mutators: Mu
     save.mutatorClears[key] = true;
     writeSave(save);
   }
+}
+
+export function recordElementalKills(save: SaveData, count: number): void {
+  if (count <= 0) return;
+  save.elementalKills += count;
+  writeSave(save);
 }

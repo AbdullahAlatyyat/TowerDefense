@@ -12,6 +12,7 @@ import { MUTATORS, type MutatorId } from "../data/mutators";
 import {
   SELL_REFUND,
   TOWERS,
+  type DamageType,
   type TowerStats,
   type TowerTypeId,
 } from "../data/towers";
@@ -38,6 +39,11 @@ export interface Enemy {
   /** brittle mark (frost Brittle path): bonus damage taken from all sources */
   brittleUntilTick: number;
   brittleBonus: number;
+  /** poison/burn DoT (alchemist): single-slot, overwrite semantics like slow/brittle */
+  poisonUntilTick: number;
+  poisonDamagePerTick: number;
+  /** stun (tesla Paralysis): halts movement outright, distinct from a slow */
+  stunUntilTick: number;
   /** current/max shield pool (Warden); 0 for enemies without a shield */
   shieldHp: number;
   shieldMax: number;
@@ -85,6 +91,13 @@ export interface Projectile {
   slowTicks: number;
   brittleBonus: number;
   brittleTicks: number;
+  damageType: DamageType;
+  dotDamagePerTick: number;
+  dotTicks: number;
+  stunTicks: number;
+  chainCount: number;
+  chainRadius: number;
+  chainFalloff: number;
 }
 
 export type GameStatus = "playing" | "won" | "lost";
@@ -117,6 +130,8 @@ export interface GameState {
   towers: Tower[];
   projectiles: Projectile[];
   nextId: number;
+  /** lifetime-this-run count of enemies killed by a non-physical damage type */
+  elementalKills: number;
 }
 
 /** Flat bonuses from owned meta-upgrades, applied on top of the difficulty scalar. */
@@ -159,6 +174,7 @@ export function createGame(
     towers: [],
     projectiles: [],
     nextId: 1,
+    elementalKills: 0,
   };
 }
 
@@ -177,6 +193,36 @@ export function towerStats(tower: Tower): TowerStats {
   const def = TOWERS[tower.type];
   if (tower.tier === 0 || tower.path === null) return def.base;
   return def.paths[tower.path].tiers[(tower.tier - 1) as 0 | 1].stats;
+}
+
+/**
+ * towerStats(tower) with active Beacon-style aura buffs folded in. Bonuses from
+ * every aura-radiating tower in range stack additively (not compounding), so
+ * overlap is order-independent; iterates state.towers in stable array order.
+ */
+export function effectiveTowerStats(state: GameState, tower: Tower): TowerStats {
+  const base = towerStats(tower);
+  let damageMul = 1;
+  let rateMul = 1;
+  let rangeMul = 1;
+  for (const other of state.towers) {
+    if (other.id === tower.id) continue;
+    const aura = towerStats(other).aura;
+    if (!aura) continue;
+    const dx = other.x - tower.x;
+    const dy = other.y - tower.y;
+    if (dx * dx + dy * dy > aura.radius * aura.radius) continue;
+    damageMul += (aura.damageMul ?? 1) - 1;
+    rateMul += (aura.rateMul ?? 1) - 1;
+    rangeMul += (aura.rangeMul ?? 1) - 1;
+  }
+  if (damageMul === 1 && rateMul === 1 && rangeMul === 1) return base;
+  return {
+    ...base,
+    damage: base.damage * damageMul,
+    cooldownTicks: Math.max(1, Math.round(base.cooldownTicks * rateMul)),
+    range: base.range * rangeMul,
+  };
 }
 
 export function canPlaceTower(

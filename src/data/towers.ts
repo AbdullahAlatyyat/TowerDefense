@@ -1,4 +1,13 @@
-export type TowerTypeId = "gunner" | "cannon" | "frost" | "sniper";
+export type TowerTypeId =
+  | "gunner"
+  | "cannon"
+  | "frost"
+  | "sniper"
+  | "alchemist"
+  | "tesla"
+  | "beacon";
+
+export type DamageType = "physical" | "poison" | "lightning";
 
 /**
  * Absolute stat block for one tower state. Upgrade tiers are full overrides,
@@ -20,6 +29,24 @@ export interface TowerStats {
   /** extra damage multiplier all sources deal to enemies marked by this tower */
   brittleBonus?: number;
   brittleTicks?: number;
+  /** defaults to "physical" when omitted */
+  damageType?: DamageType;
+  /** extra damage applied over time, independent of impact damage */
+  dotDamagePerTick?: number;
+  dotTicks?: number;
+  /** halts enemy movement outright for this many ticks, distinct from slowFactor */
+  stunTicks?: number;
+  /** bounces to additional nearby enemies with damage falloff per bounce */
+  chainCount?: number;
+  chainRadius?: number;
+  chainFalloff?: number;
+  /** passive buff radiated to other towers in range; this tower need not attack */
+  aura?: {
+    radius: number;
+    damageMul?: number;
+    rateMul?: number;
+    rangeMul?: number;
+  };
 }
 
 export interface UpgradeTier {
@@ -295,6 +322,264 @@ export const TOWERS: Record<TowerTypeId, TowerDef> = {
       },
     ],
   },
+  alchemist: {
+    id: "alchemist",
+    name: "Alchemist",
+    icon: "🧪",
+    cost: 65,
+    color: 0x65a30d,
+    edgeColor: 0x365314,
+    projectileColor: 0x84cc16,
+    blurb: "Lobs corrosive vials that poison over time.",
+    base: {
+      damage: 1,
+      range: 2.3,
+      cooldownTicks: 30,
+      projectileSpeed: 6.5,
+      damageType: "poison",
+      dotDamagePerTick: 0.35,
+      dotTicks: 60,
+    },
+    paths: [
+      {
+        name: "Virulence",
+        tiers: [
+          {
+            cost: 45,
+            label: "Concentrated toxin",
+            stats: {
+              damage: 1,
+              range: 2.3,
+              cooldownTicks: 30,
+              projectileSpeed: 6.5,
+              damageType: "poison",
+              dotDamagePerTick: 0.55,
+              dotTicks: 75,
+            },
+          },
+          {
+            cost: 80,
+            label: "Plague vial",
+            stats: {
+              damage: 2,
+              range: 2.4,
+              cooldownTicks: 30,
+              projectileSpeed: 7,
+              damageType: "poison",
+              dotDamagePerTick: 0.9,
+              dotTicks: 90,
+            },
+          },
+        ],
+      },
+      {
+        name: "Caustic Splash",
+        tiers: [
+          {
+            cost: 50,
+            label: "Splash vial",
+            stats: {
+              damage: 2,
+              range: 2.3,
+              cooldownTicks: 32,
+              projectileSpeed: 6.5,
+              damageType: "poison",
+              splashRadius: 1.0,
+              dotDamagePerTick: 0.3,
+              dotTicks: 50,
+            },
+          },
+          {
+            cost: 90,
+            label: "Miasma cloud",
+            stats: {
+              damage: 3,
+              range: 2.4,
+              cooldownTicks: 32,
+              projectileSpeed: 6.5,
+              damageType: "poison",
+              splashRadius: 1.4,
+              dotDamagePerTick: 0.4,
+              dotTicks: 60,
+            },
+          },
+        ],
+      },
+    ],
+  },
+
+  tesla: {
+    id: "tesla",
+    name: "Tesla Coil",
+    icon: "⚡",
+    cost: 85,
+    color: 0x22d3ee,
+    edgeColor: 0x0e7490,
+    projectileColor: 0xa5f3fc,
+    blurb: "Arcs lightning between nearby enemies.",
+    base: {
+      damage: 4,
+      range: 2.0,
+      cooldownTicks: 28,
+      projectileSpeed: 14,
+      damageType: "lightning",
+      chainCount: 2,
+      chainRadius: 1.6,
+      chainFalloff: 0.6,
+    },
+    paths: [
+      {
+        name: "Overcharge",
+        tiers: [
+          {
+            cost: 55,
+            label: "Extra coil",
+            stats: {
+              damage: 4,
+              range: 2.0,
+              cooldownTicks: 28,
+              projectileSpeed: 14,
+              damageType: "lightning",
+              chainCount: 3,
+              chainRadius: 1.8,
+              chainFalloff: 0.65,
+            },
+          },
+          {
+            cost: 95,
+            label: "Storm array",
+            stats: {
+              damage: 5,
+              range: 2.2,
+              cooldownTicks: 26,
+              projectileSpeed: 15,
+              damageType: "lightning",
+              chainCount: 4,
+              chainRadius: 2.0,
+              chainFalloff: 0.7,
+            },
+          },
+        ],
+      },
+      {
+        name: "Paralysis",
+        tiers: [
+          {
+            cost: 60,
+            label: "Shock jolt",
+            stats: {
+              damage: 4,
+              range: 2.0,
+              cooldownTicks: 28,
+              projectileSpeed: 14,
+              damageType: "lightning",
+              chainCount: 1,
+              chainRadius: 1.6,
+              chainFalloff: 0.6,
+              stunTicks: 15,
+            },
+          },
+          {
+            cost: 100,
+            label: "Paralytic surge",
+            stats: {
+              damage: 6,
+              range: 2.1,
+              cooldownTicks: 30,
+              projectileSpeed: 15,
+              damageType: "lightning",
+              chainCount: 2,
+              chainRadius: 1.7,
+              chainFalloff: 0.6,
+              stunTicks: 24,
+            },
+          },
+        ],
+      },
+    ],
+  },
+
+  beacon: {
+    id: "beacon",
+    name: "Beacon",
+    icon: "📡",
+    cost: 70,
+    color: 0xfbbf24,
+    edgeColor: 0x92650a,
+    projectileColor: 0xfde68a,
+    blurb: "Doesn't attack — empowers nearby towers.",
+    base: {
+      damage: 0,
+      range: 0,
+      cooldownTicks: 999999,
+      projectileSpeed: 0,
+      aura: { radius: 2.2, damageMul: 1.15, rateMul: 0.95, rangeMul: 1.05 },
+    },
+    paths: [
+      {
+        name: "War Drums",
+        tiers: [
+          {
+            cost: 50,
+            label: "Battle hymn",
+            stats: {
+              damage: 0,
+              range: 0,
+              cooldownTicks: 999999,
+              projectileSpeed: 0,
+              aura: { radius: 2.3, damageMul: 1.3, rateMul: 0.88, rangeMul: 1.05 },
+            },
+          },
+          {
+            cost: 90,
+            label: "War anthem",
+            stats: {
+              damage: 0,
+              range: 0,
+              cooldownTicks: 999999,
+              projectileSpeed: 0,
+              aura: { radius: 2.5, damageMul: 1.5, rateMul: 0.78, rangeMul: 1.05 },
+            },
+          },
+        ],
+      },
+      {
+        name: "Watchtower",
+        tiers: [
+          {
+            cost: 45,
+            label: "Spyglass",
+            stats: {
+              damage: 0,
+              range: 0,
+              cooldownTicks: 999999,
+              projectileSpeed: 0,
+              aura: { radius: 2.8, damageMul: 1.1, rateMul: 0.95, rangeMul: 1.25 },
+            },
+          },
+          {
+            cost: 85,
+            label: "Lighthouse",
+            stats: {
+              damage: 0,
+              range: 0,
+              cooldownTicks: 999999,
+              projectileSpeed: 0,
+              aura: { radius: 3.2, damageMul: 1.1, rateMul: 0.9, rangeMul: 1.45 },
+            },
+          },
+        ],
+      },
+    ],
+  },
 };
 
-export const TOWER_ORDER: TowerTypeId[] = ["gunner", "cannon", "frost", "sniper"];
+export const TOWER_ORDER: TowerTypeId[] = [
+  "gunner",
+  "cannon",
+  "frost",
+  "sniper",
+  "alchemist",
+  "tesla",
+  "beacon",
+];

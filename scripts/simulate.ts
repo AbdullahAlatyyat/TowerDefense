@@ -30,9 +30,12 @@ const BUILD_ORDER: TowerTypeId[] = [
   "gunner",
   "frost",
   "cannon",
+  "alchemist",
   "gunner",
   "sniper",
+  "tesla",
   "cannon",
+  "beacon",
   "frost",
 ];
 /** Preferred upgrade path per type. */
@@ -41,6 +44,9 @@ const PATH_CHOICE: Record<TowerTypeId, 0 | 1> = {
   cannon: 1, // Heavy Shells
   frost: 0, // Deep Freeze
   sniper: 0, // Deadeye
+  alchemist: 0, // Virulence
+  tesla: 0, // Overcharge
+  beacon: 0, // War Drums
 };
 const UPGRADE_AFTER_TOWERS = 5;
 

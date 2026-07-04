@@ -5,7 +5,8 @@ export type AchievementId =
   | "survivor"
   | "iron_will"
   | "tycoon"
-  | "mutator_master";
+  | "mutator_master"
+  | "shock_and_awe";
 
 export interface AchievementDef {
   id: AchievementId;
@@ -57,6 +58,12 @@ export const ACHIEVEMENTS: Record<AchievementId, AchievementDef> = {
     icon: "🧬",
     description: "Beat a campaign level with a mutator active.",
   },
+  shock_and_awe: {
+    id: "shock_and_awe",
+    name: "Shock and Awe",
+    icon: "🧨",
+    description: "Kill 50 enemies with poison or lightning.",
+  },
 };
 
 export const ACHIEVEMENT_ORDER: AchievementId[] = [
@@ -67,4 +74,5 @@ export const ACHIEVEMENT_ORDER: AchievementId[] = [
   "iron_will",
   "tycoon",
   "mutator_master",
+  "shock_and_awe",
 ];

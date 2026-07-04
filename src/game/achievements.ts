@@ -11,6 +11,7 @@ const CONDITIONS: Record<AchievementId, (save: SaveData) => boolean> = {
   iron_will: (save) => Object.values(save.hardClears).some(Boolean),
   tycoon: (save) => save.currency >= 200,
   mutator_master: (save) => Object.values(save.mutatorClears).some(Boolean),
+  shock_and_awe: (save) => save.elementalKills >= 50,
 };
 
 /** Checks the full catalog against the save, unlocking any newly-met ones. */

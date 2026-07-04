@@ -261,6 +261,37 @@ function turretTexture(renderer: PixiRenderer, type: TowerTypeId): Texture {
         .stroke({ width: u * 0.025, color: 0x9fb2c8 });
       g.circle(0, 0, u * 0.16).fill(c).stroke({ width: u * 0.035, color: shade(c, 0.6) });
       break;
+    case "alchemist":
+      // bubbling flask with a narrow launcher neck pointing +x
+      g.roundRect(u * 0.05, -u * 0.05, u * 0.18, u * 0.1, u * 0.03)
+        .fill(0x4a4038)
+        .stroke({ width: u * 0.02, color: 0x2e2822 });
+      g.circle(0, 0, u * 0.19).fill(c).stroke({ width: u * 0.035, color: dark });
+      g.circle(-u * 0.05, -u * 0.05, u * 0.08).fill({ color: light, alpha: 0.5 });
+      g.circle(u * 0.02, u * 0.07, u * 0.035).fill({ color: 0xd9f99d, alpha: 0.85 });
+      g.circle(-u * 0.06, u * 0.03, u * 0.022).fill({ color: 0xd9f99d, alpha: 0.7 });
+      break;
+    case "tesla":
+      // coil body with two arcing prongs and a spark ball at the tips
+      g.circle(0, 0, u * 0.17).fill(c).stroke({ width: u * 0.035, color: dark });
+      for (const sy of [-1, 1]) {
+        g.moveTo(u * 0.1, sy * u * 0.05).lineTo(u * 0.32, sy * u * 0.18)
+          .stroke({ width: u * 0.045, color: light, cap: "round" });
+      }
+      g.circle(u * 0.3, 0, u * 0.06).fill({ color: 0xffffff, alpha: 0.85 });
+      g.circle(-u * 0.04, -u * 0.04, u * 0.07).fill({ color: light, alpha: 0.5 });
+      break;
+    case "beacon": {
+      // raised antenna on a base plate, radiating aura rings
+      for (const rr of [u * 0.32, u * 0.24]) {
+        g.circle(0, 0, rr).stroke({ width: u * 0.018, color: c, alpha: 0.3 });
+      }
+      g.circle(0, 0, u * 0.16).fill(shade(c, 0.75)).stroke({ width: u * 0.03, color: dark });
+      g.roundRect(-u * 0.03, -u * 0.42, u * 0.06, u * 0.3, u * 0.02).fill(dark);
+      g.circle(0, -u * 0.42, u * 0.09).fill(c).stroke({ width: u * 0.025, color: dark });
+      g.circle(-u * 0.03, -u * 0.45, u * 0.04).fill({ color: light, alpha: 0.6 });
+      break;
+    }
   }
   return toTexture(renderer, g);
 }
@@ -295,6 +326,22 @@ function projectileTexture(renderer: PixiRenderer, type: TowerTypeId): Texture {
         .fill(0xffffff);
       g.roundRect(-u * 0.16, -u * 0.02, u * 0.14, u * 0.04, u * 0.02)
         .fill({ color: 0xffffff, alpha: 0.4 });
+      break;
+    case "alchemist":
+      g.circle(0, 0, u * 0.09).fill(def.projectileColor).stroke({ width: u * 0.02, color: 0x365314 });
+      g.circle(-u * 0.03, -u * 0.03, u * 0.03).fill({ color: 0xffffff, alpha: 0.6 });
+      break;
+    case "tesla":
+      g.moveTo(-u * 0.14, -u * 0.06)
+        .lineTo(u * 0.02, -u * 0.02)
+        .lineTo(-u * 0.04, u * 0.02)
+        .lineTo(u * 0.14, u * 0.06)
+        .stroke({ width: u * 0.045, color: def.projectileColor, cap: "round", join: "round" });
+      g.circle(0, 0, u * 0.03).fill({ color: 0xffffff, alpha: 0.7 });
+      break;
+    case "beacon":
+      // never fires — trivial placeholder so the atlas builder has a texture
+      g.circle(0, 0, u * 0.02).fill({ color: def.projectileColor, alpha: 0.01 });
       break;
   }
   return toTexture(renderer, g);

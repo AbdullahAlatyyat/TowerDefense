@@ -2,10 +2,10 @@ import type { LoopStats } from "../core/loop";
 import { ENEMIES } from "../data/enemies";
 import { TOWER_ORDER, TOWERS } from "../data/towers";
 import {
+  effectiveTowerStats,
   sellTower,
   sellValue,
   setTargetMode,
-  towerStats,
   upgradeCost,
   upgradeTower,
   TARGET_MODES,
@@ -265,13 +265,14 @@ export function createHud(
     }
     setPanelVisible(true);
     const def = TOWERS[tower.type];
-    const stats = towerStats(tower);
+    const stats = effectiveTowerStats(state, tower);
     panelName.textContent = `${def.icon} ${def.name}`;
     btnTargetMode.textContent = `🎯 ${TARGET_LABELS[tower.targetMode]}`;
+    const tierLabel = tower.tier === 0 ? "" : `${def.paths[tower.path!].name} T${tower.tier} · `;
     panelTier.textContent =
-      tower.tier === 0
-        ? `dmg ${stats.damage} · rng ${stats.range}`
-        : `${def.paths[tower.path!].name} T${tower.tier} · dmg ${stats.damage} · rng ${stats.range}`;
+      stats.damage <= 0 && stats.aura
+        ? `${tierLabel}aura rad ${stats.aura.radius} · dmg x${stats.aura.damageMul ?? 1} · rng x${stats.aura.rangeMul ?? 1}`
+        : `${tierLabel}dmg ${stats.damage.toFixed(stats.damage % 1 === 0 ? 0 : 1)} · rng ${stats.range.toFixed(1)}`;
     sellVal.textContent = String(sellValue(tower));
 
     upBtns.forEach((btn, i) => {
