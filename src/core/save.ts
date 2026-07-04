@@ -1,5 +1,7 @@
 /** Versioned localStorage persistence for campaign progress and settings. */
 
+import type { MutatorId } from "../data/mutators";
+
 export interface DailyRecord {
   /** ISO date (YYYY-MM-DD) of the recorded attempt */
   date: string;
@@ -9,7 +11,7 @@ export interface DailyRecord {
 }
 
 export interface SaveData {
-  version: 3;
+  version: 4;
   /** levelId → best stars earned (0–3) */
   stars: Record<string, number>;
   muted: boolean;
@@ -32,6 +34,8 @@ export interface SaveData {
   bestEndlessWave: number;
   /** levelId → ever won on Hard difficulty */
   hardClears: Record<string, boolean>;
+  /** `${levelId}:${sorted mutator ids joined by ','}` → ever won with that exact mutator set active */
+  mutatorClears: Record<string, boolean>;
 }
 
 const KEY = "towerdefense-save";
@@ -39,7 +43,7 @@ const KEY = "towerdefense-save";
 const LEGACY_ENDLESS_KEY = "towerdefense-endless-best";
 
 const DEFAULTS: SaveData = {
-  version: 3,
+  version: 4,
   stars: {},
   muted: false,
   sfxVolume: 1,
@@ -52,6 +56,7 @@ const DEFAULTS: SaveData = {
   achievements: {},
   bestEndlessWave: 0,
   hardClears: {},
+  mutatorClears: {},
 };
 
 /**
@@ -62,12 +67,16 @@ const DEFAULTS: SaveData = {
 function migrateSave(raw: unknown): SaveData {
   if (!raw || typeof raw !== "object") return structuredClone(DEFAULTS);
   const data = raw as Partial<SaveData> & { version?: unknown };
+  if (data.version === 4) {
+    return { ...structuredClone(DEFAULTS), ...data, version: 4 };
+  }
   if (data.version === 3) {
-    return { ...structuredClone(DEFAULTS), ...data, version: 3 };
+    // v3 lacked mutatorClears — default it in.
+    return { ...structuredClone(DEFAULTS), ...data, version: 4 };
   }
   if (data.version === 2) {
     // v2 lacked sfxVolume/musicVolume/haptics/tutorialSeen — default those in.
-    return { ...structuredClone(DEFAULTS), ...data, version: 3 };
+    return { ...structuredClone(DEFAULTS), ...data, version: 4 };
   }
   if (data.version === 1) {
     // v1 only had stars/muted/daily — carry those forward, default the rest.
@@ -76,7 +85,7 @@ function migrateSave(raw: unknown): SaveData {
       stars: data.stars ?? {},
       muted: data.muted ?? false,
       daily: data.daily ?? null,
-      version: 3,
+      version: 4,
     };
   }
   return structuredClone(DEFAULTS);
@@ -155,6 +164,19 @@ export function recordEndlessBest(save: SaveData, wavesReached: number): void {
 export function recordHardClear(save: SaveData, levelId: string): void {
   if (!save.hardClears[levelId]) {
     save.hardClears[levelId] = true;
+    writeSave(save);
+  }
+}
+
+export function mutatorClearKey(levelId: string, mutators: MutatorId[]): string {
+  return `${levelId}:${[...mutators].sort().join(",")}`;
+}
+
+export function recordMutatorClear(save: SaveData, levelId: string, mutators: MutatorId[]): void {
+  if (mutators.length === 0) return;
+  const key = mutatorClearKey(levelId, mutators);
+  if (!save.mutatorClears[key]) {
+    save.mutatorClears[key] = true;
     writeSave(save);
   }
 }

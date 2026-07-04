@@ -11,6 +11,7 @@ import type { LevelDef } from "../src/data/level01";
 import { LEVELS } from "../src/data/levels";
 import { TOWERS, type TowerTypeId } from "../src/data/towers";
 import type { DifficultyId } from "../src/data/difficulty";
+import { MUTATOR_ORDER, type MutatorId } from "../src/data/mutators";
 import {
   createGame,
   placeTower,
@@ -106,8 +107,9 @@ function run(
   seed: number,
   verbose: boolean,
   difficulty: DifficultyId = "normal",
+  mutators: MutatorId[] = [],
 ) {
-  const state = createGame(level, seed, difficulty);
+  const state = createGame(level, seed, difficulty, undefined, mutators);
   const spots = rankedCells(level, state.tracks, state.pathCells);
   const built = { n: 0 };
   const maxTicks = 30 * 60 * 30; // 30 min safety cap
@@ -160,6 +162,18 @@ for (const level of levels) {
   const identical = JSON.stringify(a) === JSON.stringify(b);
   console.log(
     `${level.id} "${level.name}" [hard]: ${a.status} lives=${a.lives}/${level.startLives} ` +
+      `[${identical ? "ok" : "NON-DETERMINISTIC"}]`,
+  );
+  if (!identical) failed = true;
+}
+
+// Mutators, like Hard, are allowed to beat the greedy bot — only check determinism.
+for (const level of levels) {
+  const a = run(level, seed, false, "normal", MUTATOR_ORDER);
+  const b = run(level, seed, false, "normal", MUTATOR_ORDER);
+  const identical = JSON.stringify(a) === JSON.stringify(b);
+  console.log(
+    `${level.id} "${level.name}" [all-mutators]: ${a.status} lives=${a.lives}/${level.startLives} ` +
       `[${identical ? "ok" : "NON-DETERMINISTIC"}]`,
   );
   if (!identical) failed = true;

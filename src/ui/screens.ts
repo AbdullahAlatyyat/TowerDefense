@@ -2,6 +2,7 @@ import { LEVELS } from "../data/levels";
 import { dailyDateStr, dailyNumber } from "../game/daily";
 import type { SaveData } from "../core/save";
 import { DIFFICULTIES, DIFFICULTY_ORDER, type DifficultyId } from "../data/difficulty";
+import { MUTATORS, MUTATOR_ORDER, type MutatorId } from "../data/mutators";
 
 export interface Screens {
   showMenu(): void;
@@ -20,6 +21,8 @@ export function createScreens(opts: {
   onPlayEndless: () => void;
   getDifficulty: () => DifficultyId;
   onSetDifficulty: (difficulty: DifficultyId) => void;
+  getMutators: () => MutatorId[];
+  onToggleMutator: (id: MutatorId) => void;
 }): Screens {
   const menu = el("screen-menu");
   const levels = el("screen-levels");
@@ -28,6 +31,7 @@ export function createScreens(opts: {
   const endlessLabel = el("endless-label");
   const currencyLabel = el("menu-currency");
   const difficultyPicker = el("difficulty-picker");
+  const mutatorPicker = el("mutator-picker");
 
   function buildDifficultyPicker(): void {
     difficultyPicker.innerHTML = "";
@@ -44,6 +48,24 @@ export function createScreens(opts: {
     }
   }
   buildDifficultyPicker();
+
+  function buildMutatorPicker(): void {
+    mutatorPicker.innerHTML = "";
+    for (const id of MUTATOR_ORDER) {
+      const def = MUTATORS[id];
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.textContent = `${def.icon} ${def.label}`;
+      btn.title = def.description;
+      btn.classList.toggle("active", opts.getMutators().includes(id));
+      btn.addEventListener("click", () => {
+        opts.onToggleMutator(id);
+        buildMutatorPicker();
+      });
+      mutatorPicker.appendChild(btn);
+    }
+  }
+  buildMutatorPicker();
 
   el("btn-menu-play").addEventListener("click", () => {
     refreshLevels();
@@ -98,6 +120,7 @@ export function createScreens(opts: {
     showLevels() {
       refreshLevels();
       buildDifficultyPicker();
+      buildMutatorPicker();
       menu.hidden = true;
       levels.hidden = false;
     },

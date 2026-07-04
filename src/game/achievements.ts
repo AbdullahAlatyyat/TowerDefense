@@ -10,6 +10,7 @@ const CONDITIONS: Record<AchievementId, (save: SaveData) => boolean> = {
   survivor: (save) => save.bestEndlessWave >= 10,
   iron_will: (save) => Object.values(save.hardClears).some(Boolean),
   tycoon: (save) => save.currency >= 200,
+  mutator_master: (save) => Object.values(save.mutatorClears).some(Boolean),
 };
 
 /** Checks the full catalog against the save, unlocking any newly-met ones. */

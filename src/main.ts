@@ -7,6 +7,7 @@ import {
   loadSave,
   recordEndlessBest,
   recordHardClear,
+  recordMutatorClear,
   recordStars,
   starsForRun,
   writeSave,
@@ -14,6 +15,7 @@ import {
 import { LEVELS } from "./data/levels";
 import type { LevelDef } from "./data/level01";
 import type { DifficultyId } from "./data/difficulty";
+import type { MutatorId } from "./data/mutators";
 import { ACHIEVEMENTS, type AchievementId } from "./data/achievements";
 import { metaUpgradeBonus } from "./data/metaUpgrades";
 import { refreshAchievements } from "./game/achievements";
@@ -66,6 +68,7 @@ async function main(): Promise<void> {
   let state: GameState | null = null;
   let primaryAction: () => void = () => {};
   let difficulty: DifficultyId = "normal";
+  let activeMutators: MutatorId[] = [];
   let resetPlaybackControls: () => void = () => {};
 
   const ui = createInput(
@@ -78,9 +81,15 @@ async function main(): Promise<void> {
     },
   );
 
-  function runPlay(level: LevelDef, seed: number, m: Mode, diff: DifficultyId): void {
+  function runPlay(
+    level: LevelDef,
+    seed: number,
+    m: Mode,
+    diff: DifficultyId,
+    mutators: MutatorId[] = [],
+  ): void {
     mode = m;
-    state = createGame(level, seed, diff, metaUpgradeBonus(save.metaUpgrades));
+    state = createGame(level, seed, diff, metaUpgradeBonus(save.metaUpgrades), mutators);
     ui.selectedTowerId = null;
     renderer.setLevel(level);
     screens.hideAll();
@@ -89,23 +98,35 @@ async function main(): Promise<void> {
     lastWaveActive = false;
   }
 
-  function play(level: LevelDef, seed: number, m: Mode, diff: DifficultyId): void {
+  function play(
+    level: LevelDef,
+    seed: number,
+    m: Mode,
+    diff: DifficultyId,
+    mutators: MutatorId[] = [],
+  ): void {
     if (!save.tutorialSeen) {
       screens.hideAll();
       onboarding.show(() => {
         save.tutorialSeen = true;
         writeSave(save);
         onboarding.hide();
-        runPlay(level, seed, m, diff);
+        runPlay(level, seed, m, diff, mutators);
       });
       return;
     }
-    runPlay(level, seed, m, diff);
+    runPlay(level, seed, m, diff, mutators);
   }
 
   function startCampaign(index: number): void {
     const level = LEVELS[index]!;
-    play(level, hashString(`campaign:${level.id}`), { kind: "campaign", index }, difficulty);
+    play(
+      level,
+      hashString(`campaign:${level.id}`),
+      { kind: "campaign", index },
+      difficulty,
+      activeMutators,
+    );
   }
 
   function startDaily(): void {
@@ -135,6 +156,12 @@ async function main(): Promise<void> {
     getDifficulty: () => difficulty,
     onSetDifficulty: (d) => {
       difficulty = d;
+    },
+    getMutators: () => activeMutators,
+    onToggleMutator: (id) => {
+      activeMutators = activeMutators.includes(id)
+        ? activeMutators.filter((m) => m !== id)
+        : [...activeMutators, id];
     },
   });
 
@@ -284,6 +311,7 @@ async function main(): Promise<void> {
         recordStars(save, st.level.id, stars);
         if (account) pushStars(st.level.id, save.stars[st.level.id]!);
         if (difficulty === "hard") recordHardClear(save, st.level.id);
+        if (st.mutators.length > 0) recordMutatorClear(save, st.level.id, st.mutators);
         const gems = 8 + stars * 4;
         awardCurrency(save, gems);
         const unlocked = refreshAchievements(save);

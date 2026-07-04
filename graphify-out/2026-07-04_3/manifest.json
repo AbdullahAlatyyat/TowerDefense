@@ -10,8 +10,8 @@
     "semantic_hash": ""
   },
   "/home/hellmachine/Desktop/Projects/TowerDefense/src/main.ts": {
-    "mtime": 1783194503.5370395,
-    "ast_hash": "a693578d1b39e844a101f6f492c27b46",
+    "mtime": 1783192102.9397898,
+    "ast_hash": "9435d811e2f5614f11584b36d74c6ab0",
     "semantic_hash": ""
   },
   "/home/hellmachine/Desktop/Projects/TowerDefense/src/data/level01.ts": {
@@ -20,8 +20,8 @@
     "semantic_hash": ""
   },
   "/home/hellmachine/Desktop/Projects/TowerDefense/src/game/state.ts": {
-    "mtime": 1783194362.6932125,
-    "ast_hash": "248939549c645fd665473176a00a6905",
+    "mtime": 1783143218.174716,
+    "ast_hash": "5f43530067040ed8635ae25495213f70",
     "semantic_hash": ""
   },
   "/home/hellmachine/Desktop/Projects/TowerDefense/src/game/waves.ts": {
@@ -30,8 +30,8 @@
     "semantic_hash": ""
   },
   "/home/hellmachine/Desktop/Projects/TowerDefense/src/game/enemies.ts": {
-    "mtime": 1783194374.4366548,
-    "ast_hash": "eb50fdec8f6dbec7476f37dfb6700986",
+    "mtime": 1783140816.6270697,
+    "ast_hash": "deeaf05ef08051d9c504bba029fdbfcc",
     "semantic_hash": ""
   },
   "/home/hellmachine/Desktop/Projects/TowerDefense/src/game/towers.ts": {
@@ -70,13 +70,13 @@
     "semantic_hash": ""
   },
   "/home/hellmachine/Desktop/Projects/TowerDefense/scripts/simulate.ts": {
-    "mtime": 1783194556.420175,
-    "ast_hash": "349799aeb57ea1301f5cb8dce785d9a5",
+    "mtime": 1783139778.2427585,
+    "ast_hash": "730f09493e5fbd7091202e082a7ad11e",
     "semantic_hash": ""
   },
   "/home/hellmachine/Desktop/Projects/TowerDefense/index.html": {
-    "mtime": 1783194453.2291102,
-    "ast_hash": "7514dfc94b731b527a1cebbdd7ec7e82",
+    "mtime": 1783192016.7566707,
+    "ast_hash": "561f98e77fdc2d419b556ad9b92faff0",
     "semantic_hash": ""
   },
   "/home/hellmachine/Desktop/Projects/TowerDefense/vite.config.ts": {
@@ -90,8 +90,8 @@
     "semantic_hash": ""
   },
   "/home/hellmachine/Desktop/Projects/TowerDefense/src/data/achievements.ts": {
-    "mtime": 1783194523.1414018,
-    "ast_hash": "7a751340e7b9ee50a7d327df160cee6f",
+    "mtime": 1783139952.8729966,
+    "ast_hash": "6e4b4f1a6d63872c4ac941cf2554918c",
     "semantic_hash": ""
   },
   "/home/hellmachine/Desktop/Projects/TowerDefense/src/data/difficulty.ts": {
@@ -120,8 +120,8 @@
     "semantic_hash": ""
   },
   "/home/hellmachine/Desktop/Projects/TowerDefense/src/game/achievements.ts": {
-    "mtime": 1783194527.7666862,
-    "ast_hash": "f50f60ab95b0f2d090b145ec45edd00d",
+    "mtime": 1783139961.0987887,
+    "ast_hash": "2fbadea131afe8f0ccaec512573f3408",
     "semantic_hash": ""
   },
   "/home/hellmachine/Desktop/Projects/TowerDefense/src/game/endless.ts": {
@@ -150,8 +150,8 @@
     "semantic_hash": ""
   },
   "/home/hellmachine/Desktop/Projects/TowerDefense/src/core/save.ts": {
-    "mtime": 1783194414.908129,
-    "ast_hash": "6b90157d907bd532e9e6441a5b4886c2",
+    "mtime": 1783190761.9132469,
+    "ast_hash": "a04de06b226a3ebc0d0f9ccac65aa43c",
     "semantic_hash": ""
   },
   "/home/hellmachine/Desktop/Projects/TowerDefense/src/ui/shop.ts": {
@@ -165,8 +165,8 @@
     "semantic_hash": ""
   },
   "/home/hellmachine/Desktop/Projects/TowerDefense/src/ui/screens.ts": {
-    "mtime": 1783194443.8889377,
-    "ast_hash": "08d95baf82aaff349461af9a0b60ee91",
+    "mtime": 1783140125.396627,
+    "ast_hash": "54bd543571b4074ce3accd42d0cba5e6",
     "semantic_hash": ""
   },
   "/home/hellmachine/Desktop/Projects/TowerDefense/src/ui/auth.ts": {
@@ -245,8 +245,8 @@
     "semantic_hash": ""
   },
   "/home/hellmachine/Desktop/Projects/TowerDefense/CLAUDE.md": {
-    "mtime": 1783193851.4273293,
-    "ast_hash": "39137bb16cee50bcbaa7a5b704e19136",
+    "mtime": 1783142704.7426069,
+    "ast_hash": "750f3826cbb7abccdffd15be9c3e4b88",
     "semantic_hash": ""
   },
   "/home/hellmachine/Desktop/Projects/TowerDefense/public/icon.svg": {
@@ -287,11 +287,6 @@
   "/home/hellmachine/Desktop/Projects/TowerDefense/server/prisma/migrations/20260704060000_add_leaderboard_fields/migration.sql": {
     "mtime": 1783191835.0367203,
     "ast_hash": "a1e91ef653a1f381f346ca3b7b64580e",
-    "semantic_hash": ""
-  },
-  "/home/hellmachine/Desktop/Projects/TowerDefense/src/data/mutators.ts": {
-    "mtime": 1783194339.8101127,
-    "ast_hash": "0d0ff69a859a51f8bc9f2edb6e7d06a7",
     "semantic_hash": ""
   }
 }

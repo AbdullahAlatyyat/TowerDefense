@@ -4,7 +4,8 @@ export type AchievementId =
   | "daily_devotee"
   | "survivor"
   | "iron_will"
-  | "tycoon";
+  | "tycoon"
+  | "mutator_master";
 
 export interface AchievementDef {
   id: AchievementId;
@@ -50,6 +51,12 @@ export const ACHIEVEMENTS: Record<AchievementId, AchievementDef> = {
     icon: "💰",
     description: "Hold 200 gems at once.",
   },
+  mutator_master: {
+    id: "mutator_master",
+    name: "Mutator Master",
+    icon: "🧬",
+    description: "Beat a campaign level with a mutator active.",
+  },
 };
 
 export const ACHIEVEMENT_ORDER: AchievementId[] = [
@@ -59,4 +66,5 @@ export const ACHIEVEMENT_ORDER: AchievementId[] = [
   "survivor",
   "iron_will",
   "tycoon",
+  "mutator_master",
 ];

@@ -2,6 +2,7 @@ import { TICK_DT } from "../core/loop";
 import { pointAtDistance } from "../core/grid";
 import { ENEMIES } from "../data/enemies";
 import { DIFFICULTIES } from "../data/difficulty";
+import { MUTATORS } from "../data/mutators";
 import type { GameState } from "./state";
 
 /** Spawns the current wave's groups sequentially. */
@@ -25,9 +26,10 @@ export function updateSpawner(state: GameState): void {
   const def = ENEMIES[group.enemy];
   const laneIndex = group.path ?? 0;
   const start = pointAtDistance(state.tracks[laneIndex]!, 0);
+  const mutatorHpMul = state.mutators.reduce((m, id) => m * (MUTATORS[id].hpMul ?? 1), 1);
   const hp = Math.max(
     1,
-    Math.round(group.hp * def.hpMul * DIFFICULTIES[state.difficulty].hpMul),
+    Math.round(group.hp * def.hpMul * DIFFICULTIES[state.difficulty].hpMul * mutatorHpMul),
   );
   const shieldMax = def.shieldFrac ? Math.round(hp * def.shieldFrac) : 0;
   state.enemies.push({

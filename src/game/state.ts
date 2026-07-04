@@ -8,6 +8,7 @@ import { createRng, type Rng } from "../core/rng";
 import type { LevelDef } from "../data/level01";
 import type { EnemyTypeId } from "../data/enemies";
 import { DIFFICULTIES, type DifficultyId } from "../data/difficulty";
+import { MUTATORS, type MutatorId } from "../data/mutators";
 import {
   SELL_REFUND,
   TOWERS,
@@ -93,6 +94,7 @@ export interface GameState {
   rng: Rng;
   seed: number;
   difficulty: DifficultyId;
+  mutators: MutatorId[];
   tracks: PathTrack[];
   pathCells: Set<number>;
   occupied: Set<number>;
@@ -130,18 +132,23 @@ export function createGame(
   seed: number,
   difficulty: DifficultyId = "normal",
   metaBonus: MetaBonus = NO_META_BONUS,
+  mutators: MutatorId[] = [],
 ): GameState {
+  const mutatorGoldMul = mutators.reduce((m, id) => m * (MUTATORS[id].goldMul ?? 1), 1);
   return {
     level,
     rng: createRng(seed),
     seed,
     difficulty,
+    mutators,
     tracks: level.paths.map((p) => buildTrack(p)),
     pathCells: unionPathCells(level.paths),
     occupied: new Set(),
     tick: 0,
     status: "playing",
-    gold: Math.round(level.startGold * DIFFICULTIES[difficulty].goldMul) + metaBonus.goldBonus,
+    gold:
+      Math.round(level.startGold * DIFFICULTIES[difficulty].goldMul * mutatorGoldMul) +
+      metaBonus.goldBonus,
     lives: level.startLives + metaBonus.livesBonus,
     waveIndex: -1,
     waveActive: false,
@@ -258,6 +265,7 @@ export function sellValue(tower: Tower): number {
 
 export function sellTower(state: GameState, towerId: number): boolean {
   if (state.status !== "playing") return false;
+  if (state.mutators.some((id) => MUTATORS[id].noSell)) return false;
   const tower = state.towers.find((t) => t.id === towerId);
   if (!tower) return false;
   state.gold += sellValue(tower);
