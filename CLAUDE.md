@@ -52,3 +52,4 @@ Rules:
 - If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
 - Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
 - After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
+- After major work (a completed feature, plan, or multi-step task — not small edits), once `graphify update .` has run: commit the changes with a descriptive message, then push if a remote is configured (`git remote -v`). If no remote exists, commit only and note that push was skipped.
