@@ -4,10 +4,13 @@ import { TOWER_ORDER, TOWERS } from "../data/towers";
 import {
   sellTower,
   sellValue,
+  setTargetMode,
   towerStats,
   upgradeCost,
   upgradeTower,
+  TARGET_MODES,
   type GameState,
+  type TargetMode,
 } from "../game/state";
 import { canStartWave } from "../game/waves";
 import type { UiState } from "./input";
@@ -44,6 +47,13 @@ export interface HudCallbacks {
   onToggleMute?(): boolean;
   initialMuted?: boolean;
 }
+
+const TARGET_LABELS: Record<TargetMode, string> = {
+  first: "First",
+  last: "Last",
+  close: "Closest",
+  strong: "Strongest",
+};
 
 /** Populate the dock with one drag-source button per tower type. */
 function buildDock(dock: HTMLElement): void {
@@ -82,6 +92,7 @@ export function createHud(
   const panel = el("tower-panel");
   const panelName = el("panel-name");
   const panelTier = el("panel-tier");
+  const btnTargetMode = el<HTMLButtonElement>("btn-target-mode");
   const btnSell = el<HTMLButtonElement>("btn-sell");
   const sellVal = el("sell-value");
   const upBtns = [el<HTMLButtonElement>("btn-up-0"), el<HTMLButtonElement>("btn-up-1")] as const;
@@ -121,6 +132,13 @@ export function createHud(
       : getState().towers.find((t) => t.id === id);
   };
 
+  btnTargetMode.addEventListener("click", () => {
+    const tower = selectedTower();
+    if (!tower) return;
+    const next =
+      TARGET_MODES[(TARGET_MODES.indexOf(tower.targetMode) + 1) % TARGET_MODES.length]!;
+    setTargetMode(getState(), tower.id, next);
+  });
   btnSell.addEventListener("click", () => {
     const tower = selectedTower();
     if (tower && sellTower(getState(), tower.id)) {
@@ -249,6 +267,7 @@ export function createHud(
     const def = TOWERS[tower.type];
     const stats = towerStats(tower);
     panelName.textContent = `${def.icon} ${def.name}`;
+    btnTargetMode.textContent = `🎯 ${TARGET_LABELS[tower.targetMode]}`;
     panelTier.textContent =
       tower.tier === 0
         ? `dmg ${stats.damage} · rng ${stats.range}`

@@ -46,6 +46,9 @@ export interface Enemy {
   hitSeq: number;
 }
 
+export type TargetMode = "first" | "last" | "close" | "strong";
+export const TARGET_MODES: TargetMode[] = ["first", "last", "close", "strong"];
+
 export interface Tower {
   id: number;
   type: TowerTypeId;
@@ -60,6 +63,8 @@ export interface Tower {
   tier: 0 | 1 | 2;
   /** total gold spent (place + upgrades); sell refunds SELL_REFUND of it */
   invested: number;
+  /** which in-range enemy to fire at */
+  targetMode: TargetMode;
   /** for muzzle rotation in the renderer */
   aimX: number;
   aimY: number;
@@ -204,6 +209,7 @@ export function placeTower(
     path: null,
     tier: 0,
     invested: cost,
+    targetMode: "first",
     aimX: 0,
     aimY: -1,
   });
@@ -231,6 +237,18 @@ export function upgradeTower(
   tower.invested += cost;
   tower.path = pathIdx;
   tower.tier = (tower.tier + 1) as 1 | 2;
+  return true;
+}
+
+export function setTargetMode(
+  state: GameState,
+  towerId: number,
+  mode: TargetMode,
+): boolean {
+  if (state.status !== "playing") return false;
+  const tower = state.towers.find((t) => t.id === towerId);
+  if (!tower) return false;
+  tower.targetMode = mode;
   return true;
 }
 

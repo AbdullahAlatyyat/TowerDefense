@@ -9,11 +9,13 @@ datasource db {
 
 model User {
   id           Int      @id @default(autoincrement())
-  email        String   @unique
-  passwordHash String
-  muted        Boolean  @default(false)
-  currency     Int      @default(0)
-  createdAt    DateTime @default(now())
+  email           String   @unique
+  passwordHash    String
+  muted           Boolean  @default(false)
+  currency        Int      @default(0)
+  displayName     String   @default("")
+  bestEndlessWave Int      @default(0)
+  createdAt       DateTime @default(now())
 
   sessions      Session[]
   levelProgress LevelProgress[]

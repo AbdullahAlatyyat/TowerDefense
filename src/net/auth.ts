@@ -3,6 +3,8 @@ import { apiFetch, ApiError } from "./api";
 export interface Account {
   email: string;
   muted: boolean;
+  displayName: string;
+  bestEndlessWave: number;
 }
 
 export async function signUp(email: string, password: string): Promise<Account> {
@@ -25,4 +27,8 @@ export async function getSession(): Promise<Account | null> {
     if (err instanceof ApiError && err.status === 401) return null;
     throw err;
   }
+}
+
+export async function updateDisplayName(displayName: string): Promise<Account> {
+  return apiFetch<Account>("/me", { method: "PATCH", body: JSON.stringify({ displayName }) });
 }

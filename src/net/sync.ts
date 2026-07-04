@@ -7,6 +7,7 @@ interface MergedState {
   currency: number;
   metaUpgrades: Record<string, number>;
   achievements: Record<string, true>;
+  bestEndlessWave: number;
 }
 
 /** Merges local guest progress into the account and returns the authoritative merged state. */
@@ -19,6 +20,7 @@ export async function mergeOnLogin(save: SaveData): Promise<MergedState> {
       currency: save.currency,
       metaUpgrades: save.metaUpgrades,
       achievements: save.achievements,
+      bestEndlessWave: save.bestEndlessWave,
     }),
   });
 }
@@ -34,7 +36,8 @@ type OutboxEntry =
   | { type: "daily"; key: string; record: DailyRecord }
   | { type: "currency"; key: string; currency: number }
   | { type: "metaUpgrade"; key: string; upgradeId: string; tier: number }
-  | { type: "achievement"; key: string; achievementId: string };
+  | { type: "achievement"; key: string; achievementId: string }
+  | { type: "endless"; key: string; bestEndlessWave: number };
 
 const OUTBOX_KEY = "towerdefense-outbox";
 
@@ -82,6 +85,12 @@ async function sendEntry(entry: OutboxEntry): Promise<void> {
       await apiFetch("/achievement", {
         method: "POST",
         body: JSON.stringify({ achievementId: entry.achievementId }),
+      });
+      break;
+    case "endless":
+      await apiFetch("/endless", {
+        method: "POST",
+        body: JSON.stringify({ bestEndlessWave: entry.bestEndlessWave }),
       });
       break;
   }
@@ -133,6 +142,13 @@ export function pushMetaUpgrade(upgradeId: string, tier: number): void {
 export function pushAchievement(achievementId: string): void {
   const entry: OutboxEntry = { type: "achievement", key: `achievement:${achievementId}`, achievementId };
   apiFetch("/achievement", { method: "POST", body: JSON.stringify({ achievementId }) }).catch(() => {
+    enqueue(entry);
+  });
+}
+
+export function pushEndless(wavesReached: number): void {
+  const entry: OutboxEntry = { type: "endless", key: "endless", bestEndlessWave: wavesReached };
+  apiFetch("/endless", { method: "POST", body: JSON.stringify({ bestEndlessWave: wavesReached }) }).catch(() => {
     enqueue(entry);
   });
 }

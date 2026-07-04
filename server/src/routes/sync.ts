@@ -19,6 +19,7 @@ const syncBodySchema = z.object({
   currency: z.number().int().min(0).default(0),
   metaUpgrades: z.record(z.string(), z.number().int().min(0)).default({}),
   achievements: z.record(z.string(), z.literal(true)).default({}),
+  bestEndlessWave: z.number().int().min(0).default(0),
 });
 
 async function loadMergedState(userId: number, todayDate: string | null) {
@@ -48,6 +49,7 @@ async function loadMergedState(userId: number, todayDate: string | null) {
     currency: user.currency,
     metaUpgrades: metaUpgradesOut,
     achievements: achievementsOut,
+    bestEndlessWave: user.bestEndlessWave,
   };
 }
 
@@ -60,7 +62,7 @@ syncRouter.post("/sync", async (req, res) => {
     return;
   }
   const userId = (req as AuthedRequest).userId;
-  const { stars, daily, currency, metaUpgrades, achievements } = parsed.data;
+  const { stars, daily, currency, metaUpgrades, achievements, bestEndlessWave } = parsed.data;
 
   await prisma.$transaction(async (tx) => {
     for (const [levelId, incomingStars] of Object.entries(stars)) {
@@ -80,10 +82,15 @@ syncRouter.post("/sync", async (req, res) => {
         update: {}, // first-write-wins: never overwrite an existing day's result
       });
     }
-    // Currency: take the higher of the two, same "never regress" rule as stars.
+    // Currency and Endless best-wave: take the higher of the two, same "never regress" rule as stars.
     const user = await tx.user.findUniqueOrThrow({ where: { id: userId } });
-    if (currency > user.currency) {
-      await tx.user.update({ where: { id: userId }, data: { currency } });
+    const nextCurrency = Math.max(user.currency, currency);
+    const nextBestEndlessWave = Math.max(user.bestEndlessWave, bestEndlessWave);
+    if (nextCurrency > user.currency || nextBestEndlessWave > user.bestEndlessWave) {
+      await tx.user.update({
+        where: { id: userId },
+        data: { currency: nextCurrency, bestEndlessWave: nextBestEndlessWave },
+      });
     }
     for (const [upgradeId, incomingTier] of Object.entries(metaUpgrades)) {
       const existing = await tx.metaUpgrade.findUnique({ where: { userId_upgradeId: { userId, upgradeId } } });
@@ -158,6 +165,21 @@ syncRouter.post("/currency", async (req, res) => {
     await prisma.user.update({ where: { id: userId }, data: { currency: finalCurrency } });
   }
   res.json({ currency: finalCurrency });
+});
+
+syncRouter.post("/endless", async (req, res) => {
+  const parsed = z.object({ bestEndlessWave: z.number().int().min(0) }).safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "invalid_input" });
+    return;
+  }
+  const userId = (req as AuthedRequest).userId;
+  const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
+  const finalWave = Math.max(user.bestEndlessWave, parsed.data.bestEndlessWave);
+  if (finalWave > user.bestEndlessWave) {
+    await prisma.user.update({ where: { id: userId }, data: { bestEndlessWave: finalWave } });
+  }
+  res.json({ bestEndlessWave: finalWave });
 });
 
 syncRouter.post("/metaUpgrade", async (req, res) => {

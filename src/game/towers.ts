@@ -1,6 +1,12 @@
 import { TICK_DT } from "../core/loop";
 import { ENEMIES } from "../data/enemies";
-import { towerStats, type Enemy, type GameState, type Projectile } from "./state";
+import {
+  towerStats,
+  type Enemy,
+  type GameState,
+  type Projectile,
+  type TargetMode,
+} from "./state";
 
 const HIT_RADIUS = 0.18;
 
@@ -16,7 +22,7 @@ function fireTowers(state: GameState): void {
       continue;
     }
     const stats = towerStats(tower);
-    const target = acquireTarget(state, tower.x, tower.y, stats.range);
+    const target = acquireTarget(state, tower.x, tower.y, stats.range, tower.targetMode);
     if (!target) continue;
     tower.aimX = target.x - tower.x;
     tower.aimY = target.y - tower.y;
@@ -38,20 +44,34 @@ function fireTowers(state: GameState): void {
   }
 }
 
-/** Target the in-range enemy that is furthest along the path ("first"). */
+/** Target the in-range enemy scored highest by the tower's targeting mode. */
 function acquireTarget(
   state: GameState,
   x: number,
   y: number,
   range: number,
+  mode: TargetMode,
 ): Enemy | undefined {
   let best: Enemy | undefined;
+  let bestScore = -Infinity;
   const rangeSq = range * range;
   for (const enemy of state.enemies) {
     const dx = enemy.x - x;
     const dy = enemy.y - y;
-    if (dx * dx + dy * dy > rangeSq) continue;
-    if (!best || enemy.dist > best.dist) best = enemy;
+    const distSq = dx * dx + dy * dy;
+    if (distSq > rangeSq) continue;
+    const score =
+      mode === "first"
+        ? enemy.dist
+        : mode === "last"
+          ? -enemy.dist
+          : mode === "close"
+            ? -distSq
+            : enemy.hp;
+    if (!best || score > bestScore) {
+      best = enemy;
+      bestScore = score;
+    }
   }
   return best;
 }

@@ -13,6 +13,12 @@ const credentialsSchema = z.object({
   password: z.string().min(8).max(200),
 });
 
+/** Default public-facing name derived from the email local-part; never expose email itself. */
+function defaultDisplayName(email: string): string {
+  const localPart = email.split("@")[0]!.replace(/[^\w \-']/g, "").slice(0, 24);
+  return localPart || `Player${Math.floor(Math.random() * 100000)}`;
+}
+
 authRouter.post("/signup", async (req, res) => {
   const parsed = credentialsSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -28,11 +34,14 @@ authRouter.post("/signup", async (req, res) => {
   }
 
   const passwordHash = await argon2.hash(password, { type: argon2.argon2id });
-  const user = await prisma.user.create({ data: { email, passwordHash } });
+  const displayName = defaultDisplayName(email);
+  const user = await prisma.user.create({ data: { email, passwordHash, displayName } });
 
   const token = await createSession(user.id);
   setSessionCookie(res, token);
-  res.status(201).json({ email: user.email, muted: user.muted });
+  res
+    .status(201)
+    .json({ email: user.email, muted: user.muted, displayName: user.displayName, bestEndlessWave: user.bestEndlessWave });
 });
 
 authRouter.post("/login", async (req, res) => {
@@ -58,7 +67,7 @@ authRouter.post("/login", async (req, res) => {
 
   const token = await createSession(user.id);
   setSessionCookie(res, token);
-  res.json({ email: user.email, muted: user.muted });
+  res.json({ email: user.email, muted: user.muted, displayName: user.displayName, bestEndlessWave: user.bestEndlessWave });
 });
 
 authRouter.post("/logout", async (req, res) => {
@@ -70,5 +79,27 @@ authRouter.post("/logout", async (req, res) => {
 
 authRouter.get("/me", requireAuth, async (req, res) => {
   const user = await prisma.user.findUniqueOrThrow({ where: { id: (req as AuthedRequest).userId } });
-  res.json({ email: user.email, muted: user.muted });
+  res.json({ email: user.email, muted: user.muted, displayName: user.displayName, bestEndlessWave: user.bestEndlessWave });
+});
+
+const updateMeSchema = z.object({
+  displayName: z
+    .string()
+    .trim()
+    .min(1)
+    .max(24)
+    .regex(/^[\w \-']+$/),
+});
+
+authRouter.patch("/me", requireAuth, async (req, res) => {
+  const parsed = updateMeSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "invalid_input" });
+    return;
+  }
+  const user = await prisma.user.update({
+    where: { id: (req as AuthedRequest).userId },
+    data: { displayName: parsed.data.displayName },
+  });
+  res.json({ email: user.email, muted: user.muted, displayName: user.displayName, bestEndlessWave: user.bestEndlessWave });
 });

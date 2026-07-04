@@ -10,8 +10,8 @@
     "semantic_hash": ""
   },
   "/home/hellmachine/Desktop/Projects/TowerDefense/src/main.ts": {
-    "mtime": 1783192102.9397898,
-    "ast_hash": "9435d811e2f5614f11584b36d74c6ab0",
+    "mtime": 1783141248.059029,
+    "ast_hash": "dcb0e60f3aca99b370d50e305e64f9ad",
     "semantic_hash": ""
   },
   "/home/hellmachine/Desktop/Projects/TowerDefense/src/data/level01.ts": {
@@ -20,8 +20,8 @@
     "semantic_hash": ""
   },
   "/home/hellmachine/Desktop/Projects/TowerDefense/src/game/state.ts": {
-    "mtime": 1783143218.174716,
-    "ast_hash": "5f43530067040ed8635ae25495213f70",
+    "mtime": 1783140804.3962004,
+    "ast_hash": "8ad0c5e712168cdbb7b8d7c85692af6d",
     "semantic_hash": ""
   },
   "/home/hellmachine/Desktop/Projects/TowerDefense/src/game/waves.ts": {
@@ -35,8 +35,8 @@
     "semantic_hash": ""
   },
   "/home/hellmachine/Desktop/Projects/TowerDefense/src/game/towers.ts": {
-    "mtime": 1783143237.7917871,
-    "ast_hash": "dfa5493c7e2f21592de105476a8db613",
+    "mtime": 1783140831.5695882,
+    "ast_hash": "ca8f8538275fbf70a5b18c21d6bf4cce",
     "semantic_hash": ""
   },
   "/home/hellmachine/Desktop/Projects/TowerDefense/src/core/loop.ts": {
@@ -60,8 +60,8 @@
     "semantic_hash": ""
   },
   "/home/hellmachine/Desktop/Projects/TowerDefense/src/ui/hud.ts": {
-    "mtime": 1783143331.565884,
-    "ast_hash": "3be7703c66a62016aaff97f21d451a0c",
+    "mtime": 1783141317.7890606,
+    "ast_hash": "3a0c9957cca4f37b4fcc118b2c417f22",
     "semantic_hash": ""
   },
   "/home/hellmachine/Desktop/Projects/TowerDefense/src/render/renderer.ts": {
@@ -75,8 +75,8 @@
     "semantic_hash": ""
   },
   "/home/hellmachine/Desktop/Projects/TowerDefense/index.html": {
-    "mtime": 1783192016.7566707,
-    "ast_hash": "561f98e77fdc2d419b556ad9b92faff0",
+    "mtime": 1783141267.0011094,
+    "ast_hash": "395fd8b4f7c225156bb789e172245b5d",
     "semantic_hash": ""
   },
   "/home/hellmachine/Desktop/Projects/TowerDefense/vite.config.ts": {
@@ -140,18 +140,18 @@
     "semantic_hash": ""
   },
   "/home/hellmachine/Desktop/Projects/TowerDefense/src/net/sync.ts": {
-    "mtime": 1783191964.8791008,
-    "ast_hash": "62f761c9352d03c1ffb272cda86a5101",
+    "mtime": 1783140365.7057798,
+    "ast_hash": "09eaf6d0299fe1099ce6b8d3b97f02a6",
     "semantic_hash": ""
   },
   "/home/hellmachine/Desktop/Projects/TowerDefense/src/net/auth.ts": {
-    "mtime": 1783191939.5956378,
-    "ast_hash": "c40cf0fe8e1bf3f735835f60f9c95ec2",
+    "mtime": 1783135832.3359423,
+    "ast_hash": "3640640affc95ded8660d28a5160939e",
     "semantic_hash": ""
   },
   "/home/hellmachine/Desktop/Projects/TowerDefense/src/core/save.ts": {
-    "mtime": 1783190761.9132469,
-    "ast_hash": "a04de06b226a3ebc0d0f9ccac65aa43c",
+    "mtime": 1783139980.3466823,
+    "ast_hash": "f354aebac6eeac96f878559b0fb2ca30",
     "semantic_hash": ""
   },
   "/home/hellmachine/Desktop/Projects/TowerDefense/src/ui/shop.ts": {
@@ -185,13 +185,13 @@
     "semantic_hash": ""
   },
   "/home/hellmachine/Desktop/Projects/TowerDefense/src/audio/sfx.ts": {
-    "mtime": 1783190775.636898,
-    "ast_hash": "a040c7e3e1a3e87ff48ab503b90f41dd",
+    "mtime": 1783141205.304178,
+    "ast_hash": "eb231a085507385d1aa7a31d898bb55f",
     "semantic_hash": ""
   },
   "/home/hellmachine/Desktop/Projects/TowerDefense/src/audio/music.ts": {
-    "mtime": 1783190790.7862754,
-    "ast_hash": "e38b75c89c13bcc9a45346ab6e9cdf8f",
+    "mtime": 1783141121.7557895,
+    "ast_hash": "1726198ad4fd6fd4f690b781261576ea",
     "semantic_hash": ""
   },
   "/home/hellmachine/Desktop/Projects/TowerDefense/server/tsconfig.json": {
@@ -220,8 +220,8 @@
     "semantic_hash": ""
   },
   "/home/hellmachine/Desktop/Projects/TowerDefense/server/src/index.ts": {
-    "mtime": 1783192803.0234692,
-    "ast_hash": "1e791bb9e64a768913c5401ca6415c7c",
+    "mtime": 1783135671.4942336,
+    "ast_hash": "c613f4b4dfee23e6c794fcb6597bdb43",
     "semantic_hash": ""
   },
   "/home/hellmachine/Desktop/Projects/TowerDefense/server/src/middleware/requireAuth.ts": {
@@ -230,13 +230,13 @@
     "semantic_hash": ""
   },
   "/home/hellmachine/Desktop/Projects/TowerDefense/server/src/routes/sync.ts": {
-    "mtime": 1783191897.9868758,
-    "ast_hash": "df7f659910eefb0dda7b9e59904c96ec",
+    "mtime": 1783140314.6022224,
+    "ast_hash": "41624fe46b25085cfa9d54fdd491bf1b",
     "semantic_hash": ""
   },
   "/home/hellmachine/Desktop/Projects/TowerDefense/server/src/routes/auth.ts": {
-    "mtime": 1783191871.1073835,
-    "ast_hash": "1758d12799624540bcfa721ff7bccca8",
+    "mtime": 1783135648.5451598,
+    "ast_hash": "114f823afef7e093d330b680df387339",
     "semantic_hash": ""
   },
   "/home/hellmachine/Desktop/Projects/TowerDefense/server/prisma/migrations/20260704032857_init/migration.sql": {
@@ -245,48 +245,13 @@
     "semantic_hash": ""
   },
   "/home/hellmachine/Desktop/Projects/TowerDefense/CLAUDE.md": {
-    "mtime": 1783142704.7426069,
-    "ast_hash": "750f3826cbb7abccdffd15be9c3e4b88",
+    "mtime": 1783141444.139718,
+    "ast_hash": "93604c394b1df12018b48319c304d30a",
     "semantic_hash": ""
   },
   "/home/hellmachine/Desktop/Projects/TowerDefense/public/icon.svg": {
     "mtime": 1783091939.4851189,
     "ast_hash": "850aa77674e22b5f02a6b852fc66ff1e",
-    "semantic_hash": ""
-  },
-  "/home/hellmachine/Desktop/Projects/TowerDefense/src/net/leaderboard.ts": {
-    "mtime": 1783191970.5710268,
-    "ast_hash": "72c2b79925268662bd88934a7ad823cc",
-    "semantic_hash": ""
-  },
-  "/home/hellmachine/Desktop/Projects/TowerDefense/src/ui/settings.ts": {
-    "mtime": 1783192051.8238873,
-    "ast_hash": "b66610693f081ad7ea3eafb121be1660",
-    "semantic_hash": ""
-  },
-  "/home/hellmachine/Desktop/Projects/TowerDefense/src/ui/leaderboard.ts": {
-    "mtime": 1783191995.2168555,
-    "ast_hash": "7f1434fd152304ead4b29aec14c3bfc8",
-    "semantic_hash": ""
-  },
-  "/home/hellmachine/Desktop/Projects/TowerDefense/src/ui/onboarding.ts": {
-    "mtime": 1783190821.4426317,
-    "ast_hash": "3fb8f6500655356eab5abb229a7c5e00",
-    "semantic_hash": ""
-  },
-  "/home/hellmachine/Desktop/Projects/TowerDefense/server/src/routes/leaderboard.ts": {
-    "mtime": 1783191904.721799,
-    "ast_hash": "26a4bddb4380d82c019d0a59f273266d",
-    "semantic_hash": ""
-  },
-  "/home/hellmachine/Desktop/Projects/TowerDefense/server/prisma/migrations/20260704051912_add_currency_achievements_meta/migration.sql": {
-    "mtime": 1783142360.5493522,
-    "ast_hash": "7df622753777b1d6f29666c800870bbc",
-    "semantic_hash": ""
-  },
-  "/home/hellmachine/Desktop/Projects/TowerDefense/server/prisma/migrations/20260704060000_add_leaderboard_fields/migration.sql": {
-    "mtime": 1783191835.0367203,
-    "ast_hash": "a1e91ef653a1f381f346ca3b7b64580e",
     "semantic_hash": ""
   }
 }

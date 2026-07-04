@@ -10,6 +10,7 @@ export interface Music {
   /** Idempotent; call from a user gesture (mobile autoplay policy). */
   start(): void;
   setMuted(muted: boolean): void;
+  setVolume(volume: number): void;
   setIntense(intense: boolean): void;
 }
 
@@ -17,8 +18,13 @@ export interface Music {
 const CALM_CHORD = [110, 164.81, 220]; // A2, E3, A3
 const FADE = 1.4;
 
-export function createMusic(initialMuted: boolean): Music {
+function clamp01(v: number): number {
+  return Math.max(0, Math.min(1, v));
+}
+
+export function createMusic(initialMuted: boolean, initialVolume: number): Music {
   let muted = initialMuted;
+  let volume = clamp01(initialVolume);
   let started = false;
   let masterGain: GainNode | null = null;
   let calmGain: GainNode | null = null;
@@ -31,7 +37,7 @@ export function createMusic(initialMuted: boolean): Music {
     started = true;
 
     masterGain = ctx.createGain();
-    masterGain.gain.value = muted ? 0 : 0.45;
+    masterGain.gain.value = muted ? 0 : 0.45 * volume;
     masterGain.connect(ctx.destination);
 
     calmGain = ctx.createGain();
@@ -94,7 +100,14 @@ export function createMusic(initialMuted: boolean): Music {
       if (!m) start();
       const ctx = ensureAudioContext();
       if (masterGain && ctx) {
-        masterGain.gain.setTargetAtTime(m ? 0 : 0.45, ctx.currentTime, 0.2);
+        masterGain.gain.setTargetAtTime(m ? 0 : 0.45 * volume, ctx.currentTime, 0.2);
+      }
+    },
+    setVolume(v) {
+      volume = clamp01(v);
+      const ctx = ensureAudioContext();
+      if (masterGain && ctx && !muted) {
+        masterGain.gain.setTargetAtTime(0.45 * volume, ctx.currentTime, 0.2);
       }
     },
     setIntense(intense) {

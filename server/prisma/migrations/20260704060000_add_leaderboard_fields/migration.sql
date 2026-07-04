@@ -1,0 +1,20 @@
+BEGIN TRY
+
+BEGIN TRAN;
+
+-- AlterTable
+ALTER TABLE [dbo].[User] ADD [displayName] NVARCHAR(1000) NOT NULL CONSTRAINT [User_displayName_df] DEFAULT '';
+ALTER TABLE [dbo].[User] ADD [bestEndlessWave] INT NOT NULL CONSTRAINT [User_bestEndlessWave_df] DEFAULT 0;
+
+COMMIT TRAN;
+
+END TRY
+BEGIN CATCH
+
+IF @@TRANCOUNT > 0
+BEGIN
+    ROLLBACK TRAN;
+END;
+THROW
+
+END CATCH

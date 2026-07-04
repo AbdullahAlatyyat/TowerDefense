@@ -16,6 +16,7 @@ export type SfxName =
 export interface Sfx {
   play(name: SfxName): void;
   setMuted(muted: boolean): void;
+  setVolume(volume: number): void;
   isMuted(): boolean;
 }
 
@@ -74,13 +75,18 @@ const THROTTLE_MS: Partial<Record<SfxName, number>> = {
   death: 60,
 };
 
-export function createSfx(initialMuted: boolean): Sfx {
+function clamp01(v: number): number {
+  return Math.max(0, Math.min(1, v));
+}
+
+export function createSfx(initialMuted: boolean, initialVolume: number): Sfx {
   let muted = initialMuted;
+  let volume = clamp01(initialVolume);
   const lastPlayed = new Map<SfxName, number>();
 
   return {
     play(name) {
-      if (muted) return;
+      if (muted || volume <= 0) return;
       const now = performance.now();
       const throttle = THROTTLE_MS[name];
       if (throttle && now - (lastPlayed.get(name) ?? 0) < throttle) return;
@@ -97,7 +103,7 @@ export function createSfx(initialMuted: boolean): Sfx {
         if (note.f1 !== undefined) {
           osc.frequency.linearRampToValueAtTime(note.f1, start + note.dur);
         }
-        const g = note.gain ?? 0.1;
+        const g = (note.gain ?? 0.1) * volume;
         gain.gain.setValueAtTime(g, start);
         gain.gain.exponentialRampToValueAtTime(0.001, start + note.dur);
         osc.connect(gain).connect(ac.destination);
@@ -107,6 +113,9 @@ export function createSfx(initialMuted: boolean): Sfx {
     },
     setMuted(m) {
       muted = m;
+    },
+    setVolume(v) {
+      volume = clamp01(v);
     },
     isMuted: () => muted,
   };

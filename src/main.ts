@@ -27,13 +27,14 @@ import {
 import { createEndlessLevel } from "./game/endless";
 import { createGame, step, type GameState } from "./game/state";
 import { startWave } from "./game/waves";
-import { getSession, signOut, type Account } from "./net/auth";
+import { getSession, signOut, updateDisplayName, type Account } from "./net/auth";
 import {
   flushOutbox,
   mergeOnLogin,
   pushAchievement,
   pushCurrency,
   pushDaily,
+  pushEndless,
   pushMetaUpgrade,
   pushStars,
 } from "./net/sync";
@@ -42,7 +43,10 @@ import { createAchievementsScreen } from "./ui/achievements";
 import { createAuthScreen } from "./ui/auth";
 import { createHud, type BannerConfig } from "./ui/hud";
 import { createInput } from "./ui/input";
+import { createLeaderboardScreen } from "./ui/leaderboard";
+import { createOnboarding } from "./ui/onboarding";
 import { createScreens } from "./ui/screens";
+import { createSettingsScreen } from "./ui/settings";
 import { createShopScreen } from "./ui/shop";
 
 type Mode =
@@ -52,8 +56,8 @@ type Mode =
 
 async function main(): Promise<void> {
   const save = loadSave();
-  const sfx = createSfx(save.muted);
-  const music = createMusic(save.muted);
+  const sfx = createSfx(save.muted, save.sfxVolume);
+  const music = createMusic(save.muted, save.musicVolume);
   let lastWaveActive = false;
   const renderer = new Renderer();
   await renderer.init(document.getElementById("board")!, LEVELS[0]!);
@@ -69,12 +73,12 @@ async function main(): Promise<void> {
     () => state!,
     document.getElementById("dock")!,
     () => {
-      navigator.vibrate?.(15);
+      if (save.haptics) navigator.vibrate?.(15);
       sfx.play("place");
     },
   );
 
-  function play(level: LevelDef, seed: number, m: Mode, diff: DifficultyId): void {
+  function runPlay(level: LevelDef, seed: number, m: Mode, diff: DifficultyId): void {
     mode = m;
     state = createGame(level, seed, diff, metaUpgradeBonus(save.metaUpgrades));
     ui.selectedTowerId = null;
@@ -83,6 +87,20 @@ async function main(): Promise<void> {
     resetPlaybackControls();
     music.start();
     lastWaveActive = false;
+  }
+
+  function play(level: LevelDef, seed: number, m: Mode, diff: DifficultyId): void {
+    if (!save.tutorialSeen) {
+      screens.hideAll();
+      onboarding.show(() => {
+        save.tutorialSeen = true;
+        writeSave(save);
+        onboarding.hide();
+        runPlay(level, seed, m, diff);
+      });
+      return;
+    }
+    runPlay(level, seed, m, diff);
   }
 
   function startCampaign(index: number): void {
@@ -134,6 +152,27 @@ async function main(): Promise<void> {
     getSave: () => save,
     onBack: () => screens.showMenu(),
   });
+  const settingsScreen = createSettingsScreen({
+    getSave: () => save,
+    getAccount: () => account,
+    onSfxVolume: (v) => sfx.setVolume(v),
+    onMusicVolume: (v) => music.setVolume(v),
+    onHapticsChange: () => {},
+    onDisplayNameChange: async (name) => {
+      try {
+        account = await updateDisplayName(name);
+        refreshAccountBadge();
+      } catch {
+        // best-effort: keep the previous name locally if the request fails
+      }
+    },
+    onBack: () => screens.showMenu(),
+  });
+  const leaderboardScreen = createLeaderboardScreen({
+    getAccount: () => account,
+    onBack: () => screens.showMenu(),
+  });
+  const onboarding = createOnboarding();
   document.getElementById("btn-menu-shop")!.addEventListener("click", () => {
     screens.hideAll();
     shopScreen.show();
@@ -141,6 +180,21 @@ async function main(): Promise<void> {
   document.getElementById("btn-menu-achievements")!.addEventListener("click", () => {
     screens.hideAll();
     achievementsScreen.show();
+  });
+  document.getElementById("btn-menu-leaderboard")!.addEventListener("click", () => {
+    screens.hideAll();
+    leaderboardScreen.show();
+  });
+  document.getElementById("btn-menu-settings")!.addEventListener("click", () => {
+    screens.hideAll();
+    settingsScreen.show();
+  });
+  document.getElementById("btn-menu-help")!.addEventListener("click", () => {
+    screens.hideAll();
+    onboarding.show(() => {
+      onboarding.hide();
+      screens.showMenu();
+    });
   });
 
   let account: Account | null = null;
@@ -158,6 +212,7 @@ async function main(): Promise<void> {
       save.currency = merged.currency;
       save.metaUpgrades = merged.metaUpgrades;
       save.achievements = { ...save.achievements, ...merged.achievements };
+      save.bestEndlessWave = merged.bestEndlessWave;
       writeSave(save);
       screens.showMenu();
     } catch {
@@ -257,6 +312,7 @@ async function main(): Promise<void> {
     if (mode?.kind === "endless") {
       const wavesReached = st.waveIndex + 1;
       recordEndlessBest(save, wavesReached);
+      if (account) pushEndless(save.bestEndlessWave);
       const gems = Math.floor(wavesReached / 2);
       awardCurrency(save, gems);
       const unlocked = refreshAchievements(save);

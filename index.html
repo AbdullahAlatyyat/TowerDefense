@@ -42,6 +42,7 @@
         <div id="panel-head">
           <span id="panel-name">Gunner</span>
           <span id="panel-tier"></span>
+          <button id="btn-target-mode" aria-label="targeting priority">🎯 First</button>
           <button id="btn-sell">Sell 🪙 <b id="sell-value">35</b></button>
         </div>
         <div id="panel-paths">
@@ -88,6 +89,9 @@
           </button>
           <button id="btn-menu-shop" class="menu-btn">🛒 Upgrades</button>
           <button id="btn-menu-achievements" class="menu-btn">🏅 Achievements</button>
+          <button id="btn-menu-leaderboard" class="menu-btn">🏆 Leaderboard</button>
+          <button id="btn-menu-settings" class="menu-btn">⚙️ Settings</button>
+          <button id="btn-menu-help" class="menu-btn">❓ How to play</button>
         </div>
       </div>
 
@@ -104,6 +108,65 @@
           <h2>Achievements</h2>
           <div id="achievements-list"></div>
           <button id="btn-achievements-back" class="menu-btn">← Back</button>
+        </div>
+      </div>
+
+      <div id="screen-leaderboard" class="screen" hidden>
+        <div class="menu-card">
+          <h2>Leaderboard</h2>
+          <div class="segmented">
+            <button id="btn-leaderboard-tab-endless" type="button" class="active">♾️ Endless</button>
+            <button id="btn-leaderboard-tab-daily" type="button">📅 Daily</button>
+          </div>
+          <p id="leaderboard-status" hidden></p>
+          <div id="leaderboard-list"></div>
+          <button id="btn-leaderboard-back" class="menu-btn">← Back</button>
+        </div>
+      </div>
+
+      <div id="screen-settings" class="screen" hidden>
+        <div class="menu-card">
+          <h2>Settings</h2>
+          <div class="settings-row" id="settings-display-name-row" hidden>
+            <div class="settings-row-head"><span>🏆 Leaderboard name</span></div>
+            <div class="settings-name-edit">
+              <input type="text" id="settings-display-name" maxlength="24" />
+              <button id="btn-settings-display-name-save" class="menu-btn">Save</button>
+            </div>
+          </div>
+          <div class="settings-row">
+            <div class="settings-row-head">
+              <span>🔊 SFX volume</span>
+              <span id="sfx-volume-value">100%</span>
+            </div>
+            <input type="range" id="settings-sfx-volume" min="0" max="100" step="1" />
+          </div>
+          <div class="settings-row">
+            <div class="settings-row-head">
+              <span>🎵 Music volume</span>
+              <span id="music-volume-value">100%</span>
+            </div>
+            <input type="range" id="settings-music-volume" min="0" max="100" step="1" />
+          </div>
+          <div class="settings-row">
+            <div class="settings-row-head"><span>📳 Vibration</span></div>
+            <div id="haptics-picker" class="segmented"></div>
+          </div>
+          <button id="btn-settings-back" class="menu-btn">← Back</button>
+        </div>
+      </div>
+
+      <div id="screen-onboarding" class="screen" hidden>
+        <div class="menu-card">
+          <h2>How to play</h2>
+          <div class="onboarding-emoji" id="onboarding-emoji"></div>
+          <h3 id="onboarding-title"></h3>
+          <p id="onboarding-body"></p>
+          <div id="onboarding-dots"></div>
+          <div class="onboarding-actions">
+            <button id="btn-onboarding-skip" class="menu-btn">Skip</button>
+            <button id="btn-onboarding-next" class="menu-btn primary">Next</button>
+          </div>
         </div>
       </div>
 

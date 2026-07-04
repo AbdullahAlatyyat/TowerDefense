@@ -9,10 +9,18 @@ export interface DailyRecord {
 }
 
 export interface SaveData {
-  version: 2;
+  version: 3;
   /** levelId → best stars earned (0–3) */
   stars: Record<string, number>;
   muted: boolean;
+  /** SFX gain multiplier, 0–1 */
+  sfxVolume: number;
+  /** Music gain multiplier, 0–1 */
+  musicVolume: number;
+  /** whether tower-placement vibration is enabled */
+  haptics: boolean;
+  /** whether the first-time "how to play" onboarding has been shown */
+  tutorialSeen: boolean;
   daily: DailyRecord | null;
   /** persistent meta-currency, spent on metaUpgrades — distinct from in-run gold */
   currency: number;
@@ -31,9 +39,13 @@ const KEY = "towerdefense-save";
 const LEGACY_ENDLESS_KEY = "towerdefense-endless-best";
 
 const DEFAULTS: SaveData = {
-  version: 2,
+  version: 3,
   stars: {},
   muted: false,
+  sfxVolume: 1,
+  musicVolume: 1,
+  haptics: true,
+  tutorialSeen: false,
   daily: null,
   currency: 0,
   metaUpgrades: {},
@@ -50,8 +62,12 @@ const DEFAULTS: SaveData = {
 function migrateSave(raw: unknown): SaveData {
   if (!raw || typeof raw !== "object") return structuredClone(DEFAULTS);
   const data = raw as Partial<SaveData> & { version?: unknown };
+  if (data.version === 3) {
+    return { ...structuredClone(DEFAULTS), ...data, version: 3 };
+  }
   if (data.version === 2) {
-    return { ...structuredClone(DEFAULTS), ...data, version: 2 };
+    // v2 lacked sfxVolume/musicVolume/haptics/tutorialSeen — default those in.
+    return { ...structuredClone(DEFAULTS), ...data, version: 3 };
   }
   if (data.version === 1) {
     // v1 only had stars/muted/daily — carry those forward, default the rest.
@@ -60,7 +76,7 @@ function migrateSave(raw: unknown): SaveData {
       stars: data.stars ?? {},
       muted: data.muted ?? false,
       daily: data.daily ?? null,
-      version: 2,
+      version: 3,
     };
   }
   return structuredClone(DEFAULTS);
