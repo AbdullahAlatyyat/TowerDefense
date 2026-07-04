@@ -43,6 +43,14 @@ For production, serve the built SPA and the API from the same origin behind one 
 
 After gameplay changes: run the headless sim (above), then exercise the real UI — `npm run dev`, place towers by drag, run a wave, check win/lose paths. A Playwright mobile-viewport (390×844, `hasTouch`) driver script pattern exists; note that Playwright `.tap()` waits for disabled buttons to re-enable, so use `dispatchEvent("click")` for guard-rail probes.
 
+## Git workflow — auto-commit & push
+
+After each completed task (a finished feature, fix, or plan step — not every individual file edit), automatically commit and push to `origin` with no confirmation prompt:
+1. Run `npm run build` (typecheck + build); for gameplay/data/balance changes also run `npm run sim`. Both must pass.
+2. Run `graphify update .` if `graphify-out/` exists (see below).
+3. `git add` the relevant files, commit with a descriptive message, and `git push`.
+If either check fails, fix the issue and re-verify before committing — never commit a red build. If a task is small/exploratory with no durable change, skip this and just report back.
+
 ## graphify
 
 This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
@@ -51,5 +59,4 @@ Rules:
 - For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
 - If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
 - Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
-- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
-- After major work (a completed feature, plan, or multi-step task — not small edits), once `graphify update .` has run: commit the changes with a descriptive message, then push if a remote is configured (`git remote -v`). If no remote exists, commit only and note that push was skipped.
+- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost) — part of the commit workflow above.
