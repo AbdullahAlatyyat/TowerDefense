@@ -5,3 +5,14 @@ dist/
 server/node_modules/
 server/dist/
 server/.env
+
+# Claude Code runtime state (not shared config)
+.claude/scheduled_tasks.lock
+
+# graphify local cache/state — machine-specific paths and content-addressed
+# cache, not part of the shareable graph (graph.json, GRAPH_REPORT.md, etc.)
+graphify-out/.graphify_python
+graphify-out/.graphify_root
+graphify-out/manifest.json
+graphify-out/cost.json
+graphify-out/cache/
