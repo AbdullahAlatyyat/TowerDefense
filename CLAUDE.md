@@ -16,12 +16,10 @@ A separate Node/Express/Prisma service (own `package.json`/`tsconfig.json`, not 
 Setup:
 1. `cp server/.env.example server/.env` and fill in `DATABASE_URL` (point at your SQL Server instance — use a dedicated low-privilege login scoped to one database, never `sa`) and `SESSION_COOKIE_SECRET`.
 2. `npm --prefix server install`
-3. `npm --prefix server run migrate` — note: `prisma migrate dev` needs a shadow database, which needs `CREATE DATABASE` permission the app's runtime login shouldn't have; run migrations with a more privileged connection string, then switch `.env` back to the restricted login for `npm --prefix server run dev`/`start`.
+3. First run (creating the initial schema): `npm --prefix server run migrate` (`prisma migrate dev`) — needs a shadow database, which needs `CREATE DATABASE` permission the app's runtime login shouldn't have; run with a more privileged connection string, then switch `.env` back to the restricted login. For subsequent migrations against the live database, prefer hand-authoring the migration folder and running `npx prisma migrate deploy` instead — it needs no shadow database, only ordinary DDL grants (`ALTER`/`CREATE TABLE`, plus `REFERENCES` on any table a new foreign key points at) on the app login's own schema.
 4. `npm run dev:all` (or `npm run dev` + `npm --prefix server run dev` separately)
 
 Key files: `server/prisma/schema.prisma` (User/Session/LevelProgress/DailyResult/UserAchievement/MetaUpgrade), `server/src/routes/{auth,sync}.ts`, `src/net/{api,auth,sync}.ts`, `src/ui/auth.ts`.
-
-**Pending migration:** `schema.prisma` has additive changes (`User.currency`, `UserAchievement`, `MetaUpgrade`) not yet applied to the live database — `npm --prefix server run generate` has been run (safe, local-only), but `npm --prefix server run migrate` still needs to be run against the real MSSQL instance with an elevated connection string per the note above.
 
 For production, serve the built SPA and the API from the same origin behind one reverse proxy (static at `/`, API at `/api/*`, TLS terminated there) — this keeps the session cookie same-site with zero CORS config, matching the dev proxy setup.
 
