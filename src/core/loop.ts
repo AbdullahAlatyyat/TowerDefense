@@ -1,0 +1,51 @@
+/**
+ * Fixed-timestep simulation loop with an accumulator, rendered via
+ * requestAnimationFrame. The simulation always advances in exact TICK_DT
+ * steps regardless of display refresh rate, which keeps runs deterministic.
+ */
+export const TICKS_PER_SECOND = 30;
+export const TICK_DT = 1 / TICKS_PER_SECOND;
+
+const MAX_FRAME_TIME = 0.25; // clamp after tab-switch pauses
+
+export interface LoopStats {
+  fps: number;
+  tickMs: number;
+}
+
+export function startLoop(
+  update: () => void,
+  render: () => void,
+): { stats: LoopStats } {
+  const stats: LoopStats = { fps: 0, tickMs: 0 };
+  let last = performance.now();
+  let accumulator = 0;
+  let fpsCount = 0;
+  let fpsWindowStart = last;
+
+  const frame = (now: number) => {
+    accumulator += Math.min((now - last) / 1000, MAX_FRAME_TIME);
+    last = now;
+
+    const tickStart = performance.now();
+    let ticked = false;
+    while (accumulator >= TICK_DT) {
+      update();
+      accumulator -= TICK_DT;
+      ticked = true;
+    }
+    if (ticked) stats.tickMs = performance.now() - tickStart;
+
+    render();
+
+    fpsCount++;
+    if (now - fpsWindowStart >= 1000) {
+      stats.fps = Math.round((fpsCount * 1000) / (now - fpsWindowStart));
+      fpsCount = 0;
+      fpsWindowStart = now;
+    }
+    requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
+  return { stats };
+}

@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#141a22" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🗼</text></svg>"
+    />
+    <title>Tower Defense</title>
+  </head>
+  <body>
+    <div id="app">
+      <header id="hud-top">
+        <button id="btn-home" aria-label="menu">🏠</button>
+        <span class="stat" id="stat-lives">❤️ <b>20</b></span>
+        <span class="stat" id="stat-gold">🪙 <b>100</b></span>
+        <span class="stat" id="stat-wave">Wave <b>0/0</b></span>
+        <button id="btn-perf" aria-label="performance stats">📈</button>
+        <button id="btn-mute" aria-label="toggle sound">🔊</button>
+      </header>
+
+      <div id="board"></div>
+
+      <footer id="hud-bottom">
+        <div id="dock"></div>
+        <button id="btn-wave" class="dock-btn primary">▶ Start wave</button>
+      </footer>
+
+      <div id="tower-panel" hidden>
+        <div id="panel-head">
+          <span id="panel-name">Gunner</span>
+          <span id="panel-tier"></span>
+          <button id="btn-sell">Sell 🪙 <b id="sell-value">35</b></button>
+        </div>
+        <div id="panel-paths">
+          <button class="upgrade-btn" id="btn-up-0">
+            <span class="up-name"></span>
+            <span class="up-label"></span>
+            <span class="up-cost"></span>
+          </button>
+          <button class="upgrade-btn" id="btn-up-1">
+            <span class="up-name"></span>
+            <span class="up-label"></span>
+            <span class="up-cost"></span>
+          </button>
+        </div>
+      </div>
+
+      <div id="perf" hidden></div>
+
+      <div id="banner" hidden>
+        <div id="banner-card">
+          <h1 id="banner-title">Victory!</h1>
+          <p id="banner-sub"></p>
+          <pre id="banner-share-text" hidden></pre>
+          <button id="btn-banner-primary">Play again</button>
+          <button id="btn-banner-share" class="secondary" hidden>📋 Share result</button>
+          <button id="btn-banner-menu" class="secondary">🏠 Menu</button>
+        </div>
+      </div>
+
+      <div id="screen-menu" class="screen">
+        <div class="menu-card">
+          <button id="btn-account" class="account-badge">👤 Sign in</button>
+          <h1 class="game-title">🗼<br />Tower Defense</h1>
+          <p class="tagline">One thumb. Six waves. Hold the line.</p>
+          <button id="btn-menu-play" class="menu-btn primary">▶ Campaign</button>
+          <button id="btn-menu-daily" class="menu-btn">
+            📅 <span id="daily-label">Daily Challenge</span>
+          </button>
+        </div>
+      </div>
+
+      <div id="screen-levels" class="screen" hidden>
+        <div class="menu-card">
+          <h2>Select level</h2>
+          <div id="level-grid"></div>
+          <button id="btn-levels-back" class="menu-btn">← Back</button>
+        </div>
+      </div>
+
+      <div id="screen-auth" class="screen" hidden>
+        <div class="menu-card">
+          <div class="auth-tabs">
+            <button id="btn-auth-tab-signin" class="auth-tab active" type="button">Sign in</button>
+            <button id="btn-auth-tab-signup" class="auth-tab" type="button">Sign up</button>
+          </div>
+          <form id="auth-form">
+            <input
+              id="auth-email"
+              class="auth-input"
+              type="email"
+              placeholder="Email"
+              autocomplete="email"
+              required
+            />
+            <input
+              id="auth-password"
+              class="auth-input"
+              type="password"
+              placeholder="Password"
+              autocomplete="current-password"
+              minlength="8"
+              required
+            />
+            <p id="auth-error" class="auth-error" hidden></p>
+            <button id="btn-auth-submit" class="menu-btn primary" type="submit">Sign in</button>
+          </form>
+          <button id="btn-auth-guest" class="menu-btn">Continue as guest</button>
+        </div>
+      </div>
+
+      <div id="rotate-hint"><div>🔄<br />Please rotate your device to portrait</div></div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

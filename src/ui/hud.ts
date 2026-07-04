@@ -1,0 +1,231 @@
+import type { LoopStats } from "../core/loop";
+import { TOWER_ORDER, TOWERS } from "../data/towers";
+import {
+  sellTower,
+  sellValue,
+  towerStats,
+  upgradeCost,
+  upgradeTower,
+  type GameState,
+} from "../game/state";
+import { canStartWave } from "../game/waves";
+import type { UiState } from "./input";
+
+function el<T extends HTMLElement>(id: string): T {
+  return document.getElementById(id) as T;
+}
+
+export interface Hud {
+  /** Refresh all HUD readouts from the current state. Cheap; call per frame. */
+  update(state: GameState, stats: LoopStats): void;
+}
+
+/** What the game-over banner should show; produced by the app orchestrator. */
+export interface BannerConfig {
+  title: string;
+  sub: string;
+  primaryLabel: string;
+  /** daily result text; enables the share button and preview when set */
+  shareText?: string;
+}
+
+export interface HudCallbacks {
+  onStartWave(): void;
+  /** banner primary button (retry / next level / play again) */
+  onPrimary(): void;
+  /** home button and banner menu button */
+  onMenu(): void;
+  /** called once when a run ends; returns what the banner should show */
+  onGameOver(state: GameState): BannerConfig;
+  /** UI sound hooks */
+  onSfx?(name: "upgrade" | "sell"): void;
+  /** toggle sound; returns the new muted state */
+  onToggleMute?(): boolean;
+  initialMuted?: boolean;
+}
+
+/** Populate the dock with one drag-source button per tower type. */
+function buildDock(dock: HTMLElement): void {
+  for (const type of TOWER_ORDER) {
+    const def = TOWERS[type];
+    const btn = document.createElement("button");
+    btn.className = "build-btn";
+    btn.dataset.tower = type;
+    btn.title = `${def.name} — ${def.blurb}`;
+    btn.innerHTML = `${def.icon}<span class="cost">🪙${def.cost}</span>`;
+    dock.appendChild(btn);
+  }
+}
+
+export function createHud(
+  getUi: () => UiState,
+  getState: () => GameState,
+  cb: HudCallbacks,
+): Hud {
+  const lives = el("stat-lives").querySelector("b")!;
+  const gold = el("stat-gold").querySelector("b")!;
+  const wave = el("stat-wave").querySelector("b")!;
+  const btnWave = el<HTMLButtonElement>("btn-wave");
+  const dock = el("dock");
+  const banner = el("banner");
+  const bannerTitle = el("banner-title");
+  const bannerSub = el("banner-sub");
+  const perf = el("perf");
+
+  const panel = el("tower-panel");
+  const panelName = el("panel-name");
+  const panelTier = el("panel-tier");
+  const btnSell = el<HTMLButtonElement>("btn-sell");
+  const sellVal = el("sell-value");
+  const upBtns = [el<HTMLButtonElement>("btn-up-0"), el<HTMLButtonElement>("btn-up-1")] as const;
+
+  const btnPrimary = el<HTMLButtonElement>("btn-banner-primary");
+  const btnShare = el<HTMLButtonElement>("btn-banner-share");
+  const shareTextEl = el("banner-share-text");
+  let shareText = "";
+
+  buildDock(dock);
+  const buildBtns = [...dock.querySelectorAll<HTMLButtonElement>(".build-btn")];
+
+  btnWave.addEventListener("click", cb.onStartWave);
+  btnPrimary.addEventListener("click", cb.onPrimary);
+  el("btn-banner-menu").addEventListener("click", cb.onMenu);
+  el("btn-home").addEventListener("click", cb.onMenu);
+  btnShare.addEventListener("click", async () => {
+    try {
+      if (navigator.share) {
+        await navigator.share({ text: shareText });
+      } else {
+        await navigator.clipboard.writeText(shareText);
+        btnShare.textContent = "✅ Copied!";
+      }
+    } catch {
+      // user cancelled the share sheet — nothing to do
+    }
+  });
+  el("btn-perf").addEventListener("click", () => {
+    perf.hidden = !perf.hidden;
+  });
+
+  const selectedTower = () => {
+    const id = getUi().selectedTowerId;
+    return id === null
+      ? undefined
+      : getState().towers.find((t) => t.id === id);
+  };
+
+  btnSell.addEventListener("click", () => {
+    const tower = selectedTower();
+    if (tower && sellTower(getState(), tower.id)) {
+      getUi().selectedTowerId = null;
+      cb.onSfx?.("sell");
+    }
+  });
+  upBtns.forEach((btn, i) => {
+    btn.addEventListener("click", () => {
+      const tower = selectedTower();
+      if (tower && upgradeTower(getState(), tower.id, i as 0 | 1)) {
+        cb.onSfx?.("upgrade");
+      }
+    });
+  });
+
+  const btnMute = el<HTMLButtonElement>("btn-mute");
+  btnMute.textContent = cb.initialMuted ? "🔇" : "🔊";
+  btnMute.addEventListener("click", () => {
+    if (cb.onToggleMute) btnMute.textContent = cb.onToggleMute() ? "🔇" : "🔊";
+  });
+
+  let bannerShown = false;
+
+  return {
+    update(state, stats) {
+      lives.textContent = String(state.lives);
+      gold.textContent = String(state.gold);
+      wave.textContent = `${state.waveIndex + 1}/${state.level.waves.length}`;
+
+      btnWave.disabled = !canStartWave(state);
+      btnWave.textContent = state.waveActive
+        ? `Wave ${state.waveIndex + 1}…`
+        : "▶ Start wave";
+      for (const btn of buildBtns) {
+        const def = TOWERS[btn.dataset.tower as keyof typeof TOWERS];
+        btn.disabled = state.status !== "playing" || state.gold < def.cost;
+      }
+
+      updatePanel(state);
+
+      if (!perf.hidden) {
+        perf.textContent =
+          `${stats.fps} fps  tick ${stats.tickMs.toFixed(1)}ms\n` +
+          `enemies ${state.enemies.length}  towers ${state.towers.length}  ` +
+          `shots ${state.projectiles.length}`;
+      }
+
+      const over = state.status !== "playing";
+      if (over && !bannerShown) {
+        bannerShown = true;
+        const config = cb.onGameOver(state);
+        bannerTitle.textContent = config.title;
+        bannerSub.textContent = config.sub;
+        btnPrimary.textContent = config.primaryLabel;
+        shareText = config.shareText ?? "";
+        btnShare.hidden = !config.shareText;
+        btnShare.textContent = "📋 Share result";
+        shareTextEl.hidden = !config.shareText;
+        shareTextEl.textContent = config.shareText ?? "";
+        banner.hidden = false;
+        console.log(
+          `[determinism] seed=${state.seed} tick=${state.tick} ` +
+            `gold=${state.gold} lives=${state.lives} status=${state.status}`,
+        );
+      } else if (!over && bannerShown) {
+        bannerShown = false;
+        banner.hidden = true;
+      }
+    },
+  };
+
+  function updatePanel(state: GameState): void {
+    const tower = selectedTower();
+    if (!tower || state.status !== "playing") {
+      if (getUi().selectedTowerId !== null && !tower) {
+        getUi().selectedTowerId = null; // tower was sold/removed
+      }
+      panel.hidden = true;
+      return;
+    }
+    panel.hidden = false;
+    const def = TOWERS[tower.type];
+    const stats = towerStats(tower);
+    panelName.textContent = `${def.icon} ${def.name}`;
+    panelTier.textContent =
+      tower.tier === 0
+        ? `dmg ${stats.damage} · rng ${stats.range}`
+        : `${def.paths[tower.path!].name} T${tower.tier} · dmg ${stats.damage} · rng ${stats.range}`;
+    sellVal.textContent = String(sellValue(tower));
+
+    upBtns.forEach((btn, i) => {
+      const path = def.paths[i as 0 | 1];
+      const cost = upgradeCost(tower, i as 0 | 1);
+      const nameEl = btn.querySelector(".up-name")!;
+      const labelEl = btn.querySelector(".up-label")!;
+      const costEl = btn.querySelector(".up-cost")!;
+      nameEl.textContent = path.name;
+      btn.classList.remove("maxed");
+      if (cost === null) {
+        const maxedHere = tower.path === i && tower.tier >= 2;
+        labelEl.textContent = maxedHere
+          ? path.tiers[1].label
+          : "Locked (other path chosen)";
+        costEl.textContent = maxedHere ? "MAX" : "🔒";
+        if (maxedHere) btn.classList.add("maxed");
+        btn.disabled = true;
+      } else {
+        labelEl.textContent = path.tiers[tower.tier as 0 | 1].label;
+        costEl.textContent = `🪙 ${cost}`;
+        btn.disabled = state.gold < cost;
+      }
+    });
+  }
+}
